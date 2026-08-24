@@ -16,6 +16,34 @@ cmake -S . -B build
 cmake --build build
 ```
 
+## Tests
+
+The unit tests are built by default and registered with CTest:
+
+```
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+Set `-DGEOSOLAR_BUILD_TESTS=OFF` to skip them. The test tree mirrors the
+library layout, so a test sits in the same relative place as the code it
+covers:
+
+| Test suite | Covers |
+| --- | --- |
+| `tests/geolib/UtmProjectionTests.cpp` | `UtmProjection` / `Utm32Projection` |
+| `tests/geolib/data_sources/Utm32GridTileTests.cpp` | `Utm32GridTile` |
+| `tests/geolib/data_sources/BavariaDgm1TileReaderTests.cpp` | `BavariaDgm1TileReader` |
+| `tests/geolib/data_sources/BavariaDgm1HeightDataSourceTests.cpp` | `BavariaDgm1HeightDataSource` |
+| `tests/geolib/data_sources/BavariaDgm1TileDownloaderTests.cpp` | `BavariaDgm1TileDownloader` |
+
+Each suite is a small standalone executable that prints its failures and
+returns a non zero exit code. `tests/TestSupport.h` provides the `CHECK_*`
+assertion macros, so the tests stay as dependency free as the library itself.
+The data source and downloader tests use injected loader/fetch callbacks and
+therefore never touch the network.
+
 ## geolib
 
 `geolib` is a dependency free C++17 static library. All types live in the
