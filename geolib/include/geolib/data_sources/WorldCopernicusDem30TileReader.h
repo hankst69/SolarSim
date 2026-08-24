@@ -22,8 +22,8 @@ namespace geo {
 ///           NODATA_value are evaluated; xllcenter/yllcenter are accepted too.
 ///
 /// The reader only parses; downloading is handled by
-/// CopernicusDem30TileDownloader.
-class CopernicusDem30TileReader {
+/// WorldCopernicusDem30TileDownloader.
+class WorldCopernicusDem30TileReader {
 public:
     /// Auto detects the format from the file extension (".asc" -> ASCII grid,
     /// everything else -> HGT) and reads the tile. `bounds` is used for the

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "geolib/data_sources/CopernicusDem30HeightDataSource.h"
+#include "geolib/data_sources/WorldCopernicusDem30HeightDataSource.h"
 
 #include <functional>
 #include <string>
@@ -17,9 +17,9 @@ namespace geo {
 ///
 /// Tiles are named after the south west corner of their 1 deg square, e.g.
 /// 48 N / 11 E -> `Copernicus_DSM_COG_10_N48_00_E011_00_DEM.hgt`.
-class CopernicusDem30TileDownloader {
+class WorldCopernicusDem30TileDownloader {
 public:
-    using TileKey = CopernicusDem30HeightDataSource::TileKey;
+    using TileKey = WorldCopernicusDem30HeightDataSource::TileKey;
 
     /// Downloads `url` into the local file `targetPath`. Returns false if the
     /// tile could not be retrieved (404, no network, ...).
@@ -37,7 +37,7 @@ public:
         bool allowDownload{true};
     };
 
-    explicit CopernicusDem30TileDownloader(Config config = {}, FetchFunction fetch = {});
+    explicit WorldCopernicusDem30TileDownloader(Config config = {}, FetchFunction fetch = {});
 
     const Config& config() const { return m_config; }
 
@@ -65,9 +65,9 @@ public:
                                                    std::string* error = nullptr) const;
 
     /// Tile loader callback that can be handed to
-    /// CopernicusDem30HeightDataSource. The returned loader keeps a reference to
+    /// WorldCopernicusDem30HeightDataSource. The returned loader keeps a reference to
     /// this downloader, which must therefore outlive the data source.
-    CopernicusDem30HeightDataSource::TileLoader tileLoader() const;
+    WorldCopernicusDem30HeightDataSource::TileLoader tileLoader() const;
 
 private:
     Config m_config;

@@ -1,4 +1,4 @@
-#include "geolib/data_sources/CopernicusDem30TileDownloader.h"
+#include "geolib/data_sources/WorldCopernicusDem30TileDownloader.h"
 
 #include "TestSupport.h"
 
@@ -10,7 +10,7 @@ using namespace geo;
 
 namespace {
 
-using TileKey = CopernicusDem30TileDownloader::TileKey;
+using TileKey = WorldCopernicusDem30TileDownloader::TileKey;
 
 const char* kCacheDir = "copernicus_test_cache";
 
@@ -41,9 +41,9 @@ void removeCache()
     }
 }
 
-CopernicusDem30TileDownloader::Config makeConfig()
+WorldCopernicusDem30TileDownloader::Config makeConfig()
 {
-    CopernicusDem30TileDownloader::Config config;
+    WorldCopernicusDem30TileDownloader::Config config;
     config.cacheDirectory = kCacheDir;
     config.baseUrl = "https://example.invalid/glo30";
     return config;
@@ -51,7 +51,7 @@ CopernicusDem30TileDownloader::Config makeConfig()
 
 void testFileNaming()
 {
-    const CopernicusDem30TileDownloader downloader(makeConfig());
+    const WorldCopernicusDem30TileDownloader downloader(makeConfig());
     CHECK_EQ_STR(downloader.fileNameFor(TileKey{48, 11}),
                  "Copernicus_DSM_COG_10_N48_00_E011_00_DEM.hgt");
     CHECK_EQ_STR(downloader.urlFor(TileKey{48, 11}),
@@ -66,7 +66,7 @@ void testUrlWithTrailingSlash()
 {
     auto config = makeConfig();
     config.baseUrl = "https://example.invalid/glo30/";
-    const CopernicusDem30TileDownloader downloader(config);
+    const WorldCopernicusDem30TileDownloader downloader(config);
     CHECK_EQ_STR(downloader.urlFor(TileKey{48, 11}),
                  "https://example.invalid/glo30/Copernicus_DSM_COG_10_N48_00_E011_00_DEM/"
                  "Copernicus_DSM_COG_10_N48_00_E011_00_DEM.hgt");
@@ -74,7 +74,7 @@ void testUrlWithTrailingSlash()
 
 void testDefaultConfig()
 {
-    const CopernicusDem30TileDownloader downloader;
+    const WorldCopernicusDem30TileDownloader downloader;
     CHECK_TRUE(downloader.config().allowDownload);
     CHECK_FALSE(downloader.config().cacheDirectory.empty());
 }
@@ -85,7 +85,7 @@ void testCachedFileIsUsedWithoutDownload()
     const TileKey key{48, 11};
 
     int fetchCalls = 0;
-    CopernicusDem30TileDownloader downloader(makeConfig(),
+    WorldCopernicusDem30TileDownloader downloader(makeConfig(),
                                              [&](const std::string&, const std::string& target) {
                                                  ++fetchCalls;
                                                  writeHgtTile(target, 456);
@@ -117,7 +117,7 @@ void testDownloadDisabled()
     config.allowDownload = false;
 
     int fetchCalls = 0;
-    const CopernicusDem30TileDownloader downloader(config,
+    const WorldCopernicusDem30TileDownloader downloader(config,
                                                    [&](const std::string&, const std::string&) {
                                                        ++fetchCalls;
                                                        return true;
@@ -133,7 +133,7 @@ void testDownloadDisabled()
 void testMissingFetchFunction()
 {
     removeCache();
-    const CopernicusDem30TileDownloader downloader(makeConfig());
+    const WorldCopernicusDem30TileDownloader downloader(makeConfig());
     std::string localPath;
     std::string error;
     CHECK_FALSE(downloader.ensureLocalFile(TileKey{50, 11}, localPath, &error));
@@ -143,7 +143,7 @@ void testMissingFetchFunction()
 void testFailedDownloadReportsError()
 {
     removeCache();
-    const CopernicusDem30TileDownloader downloader(makeConfig(),
+    const WorldCopernicusDem30TileDownloader downloader(makeConfig(),
                                                    [](const std::string&, const std::string&) {
                                                        return false; // simulate a 404 (ocean tile)
                                                    });
@@ -156,7 +156,7 @@ void testFailedDownloadReportsError()
 void testLyingFetchIsDetected()
 {
     removeCache();
-    const CopernicusDem30TileDownloader downloader(makeConfig(),
+    const WorldCopernicusDem30TileDownloader downloader(makeConfig(),
                                                    [](const std::string&, const std::string&) {
                                                        return true; // but no file is created
                                                    });
@@ -169,7 +169,7 @@ void testLyingFetchIsDetected()
 void testTileLoaderIntegration()
 {
     removeCache();
-    CopernicusDem30TileDownloader downloader(makeConfig(),
+    WorldCopernicusDem30TileDownloader downloader(makeConfig(),
                                              [](const std::string&, const std::string& target) {
                                                  writeHgtTile(target, 321);
                                                  return true;
@@ -187,7 +187,7 @@ void testTileLoaderIntegration()
     removeCache();
 
     // An unavailable tile must surface as a null pointer.
-    CopernicusDem30TileDownloader failing(
+    WorldCopernicusDem30TileDownloader failing(
         makeConfig(), [](const std::string&, const std::string&) { return false; });
     CHECK_TRUE(failing.tileLoader()(TileKey{49, 11}) == nullptr);
 }
@@ -205,5 +205,5 @@ int main()
     testFailedDownloadReportsError();
     testLyingFetchIsDetected();
     testTileLoaderIntegration();
-    return geotest::summarize("CopernicusDem30TileDownloaderTests");
+    return geotest::summarize("WorldCopernicusDem30TileDownloaderTests");
 }

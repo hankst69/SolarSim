@@ -1,6 +1,6 @@
-#include "geolib/data_sources/CopernicusDem30TileDownloader.h"
+#include "geolib/data_sources/WorldCopernicusDem30TileDownloader.h"
 
-#include "geolib/data_sources/CopernicusDem30TileReader.h"
+#include "geolib/data_sources/WorldCopernicusDem30TileReader.h"
 
 #include <fstream>
 #include <string>
@@ -55,22 +55,22 @@ std::string joinPath(const std::string& directory, const std::string& fileName)
 
 } // namespace
 
-CopernicusDem30TileDownloader::CopernicusDem30TileDownloader(Config config, FetchFunction fetch)
+WorldCopernicusDem30TileDownloader::WorldCopernicusDem30TileDownloader(Config config, FetchFunction fetch)
     : m_config(std::move(config)), m_fetch(std::move(fetch))
 {
 }
 
-std::string CopernicusDem30TileDownloader::tileNameFor(const TileKey& key) const
+std::string WorldCopernicusDem30TileDownloader::tileNameFor(const TileKey& key) const
 {
     return "Copernicus_DSM_COG_10_" + key.toString() + "_DEM";
 }
 
-std::string CopernicusDem30TileDownloader::fileNameFor(const TileKey& key) const
+std::string WorldCopernicusDem30TileDownloader::fileNameFor(const TileKey& key) const
 {
     return tileNameFor(key) + m_config.fileExtension;
 }
 
-std::string CopernicusDem30TileDownloader::urlFor(const TileKey& key) const
+std::string WorldCopernicusDem30TileDownloader::urlFor(const TileKey& key) const
 {
     std::string base = m_config.baseUrl;
     if (!base.empty() && base.back() == '/') {
@@ -79,12 +79,12 @@ std::string CopernicusDem30TileDownloader::urlFor(const TileKey& key) const
     return base + "/" + tileNameFor(key) + "/" + fileNameFor(key);
 }
 
-std::string CopernicusDem30TileDownloader::cachePathFor(const TileKey& key) const
+std::string WorldCopernicusDem30TileDownloader::cachePathFor(const TileKey& key) const
 {
     return joinPath(m_config.cacheDirectory, fileNameFor(key));
 }
 
-bool CopernicusDem30TileDownloader::ensureLocalFile(const TileKey& key, std::string& localPath,
+bool WorldCopernicusDem30TileDownloader::ensureLocalFile(const TileKey& key, std::string& localPath,
                                                     std::string* error) const
 {
     localPath = cachePathFor(key);
@@ -109,17 +109,17 @@ bool CopernicusDem30TileDownloader::ensureLocalFile(const TileKey& key, std::str
 }
 
 std::shared_ptr<GridHeightDataSource>
-CopernicusDem30TileDownloader::loadTile(const TileKey& key, std::string* error) const
+WorldCopernicusDem30TileDownloader::loadTile(const TileKey& key, std::string* error) const
 {
     std::string localPath;
     if (!ensureLocalFile(key, localPath, error)) {
         return nullptr;
     }
-    return CopernicusDem30TileReader::readFile(
-        localPath, CopernicusDem30HeightDataSource::boundsFor(key), error);
+    return WorldCopernicusDem30TileReader::readFile(
+        localPath, WorldCopernicusDem30HeightDataSource::boundsFor(key), error);
 }
 
-CopernicusDem30HeightDataSource::TileLoader CopernicusDem30TileDownloader::tileLoader() const
+WorldCopernicusDem30HeightDataSource::TileLoader WorldCopernicusDem30TileDownloader::tileLoader() const
 {
     return [this](const TileKey& key) -> std::shared_ptr<GridHeightDataSource> {
         return loadTile(key);

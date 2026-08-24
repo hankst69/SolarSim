@@ -15,11 +15,11 @@ namespace geo {
 ///
 /// The data is distributed as 1 deg x 1 deg tiles on a geographic grid
 /// (EPSG:4326), named after the south west corner of the tile. Downloading and
-/// decoding of a tile is done by CopernicusDem30TileDownloader and
-/// CopernicusDem30TileReader; this class only takes a loader callback which
+/// decoding of a tile is done by WorldCopernicusDem30TileDownloader and
+/// WorldCopernicusDem30TileReader; this class only takes a loader callback which
 /// turns a tile key into a raster. Loaded tiles are cached, including negative
 /// results (ocean tiles do not exist at all).
-class CopernicusDem30HeightDataSource : public HeightDataSource {
+class WorldCopernicusDem30HeightDataSource : public HeightDataSource {
 public:
     /// Key of a GLO-30 tile: latitude/longitude of the south west corner in
     /// full degrees, as used in the official file names
@@ -40,7 +40,7 @@ public:
     /// Loads a single tile. Returns nullptr if the tile is not available.
     using TileLoader = std::function<std::shared_ptr<GridHeightDataSource>(const TileKey&)>;
 
-    explicit CopernicusDem30HeightDataSource(TileLoader loader);
+    explicit WorldCopernicusDem30HeightDataSource(TileLoader loader);
 
     std::string name() const override
     {

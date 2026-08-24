@@ -43,12 +43,12 @@ add_geolib_test(GermanyDgm5HeightDataSourceTests
     geolib/data_sources/GermanyDgm5HeightDataSourceTests.cpp)
 add_geolib_test(GermanyDgm5TileDownloaderTests
     geolib/data_sources/GermanyDgm5TileDownloaderTests.cpp)
-add_geolib_test(CopernicusDem30TileReaderTests
-    geolib/data_sources/CopernicusDem30TileReaderTests.cpp)
-add_geolib_test(CopernicusDem30HeightDataSourceTests
-    geolib/data_sources/CopernicusDem30HeightDataSourceTests.cpp)
-add_geolib_test(CopernicusDem30TileDownloaderTests
-    geolib/data_sources/CopernicusDem30TileDownloaderTests.cpp)
+add_geolib_test(WorldCopernicusDem30TileReaderTests
+    geolib/data_sources/WorldCopernicusDem30TileReaderTests.cpp)
+add_geolib_test(WorldCopernicusDem30HeightDataSourceTests
+    geolib/data_sources/WorldCopernicusDem30HeightDataSourceTests.cpp)
+add_geolib_test(WorldCopernicusDem30TileDownloaderTests
+    geolib/data_sources/WorldCopernicusDem30TileDownloaderTests.cpp)
 add_geolib_test(BngGridTileTests geolib/data_sources/BngGridTileTests.cpp)
 add_geolib_test(UkEaLidarTileReaderTests geolib/data_sources/UkEaLidarTileReaderTests.cpp)
 add_geolib_test(UkEaLidarHeightDataSourceTests

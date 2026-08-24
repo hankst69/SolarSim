@@ -1,4 +1,4 @@
-#include "geolib/data_sources/CopernicusDem30HeightDataSource.h"
+#include "geolib/data_sources/WorldCopernicusDem30HeightDataSource.h"
 
 #include "TestSupport.h"
 
@@ -10,13 +10,13 @@ using namespace geo;
 
 namespace {
 
-using TileKey = CopernicusDem30HeightDataSource::TileKey;
+using TileKey = WorldCopernicusDem30HeightDataSource::TileKey;
 
 /// Builds a 2x2 tile with a constant height covering the whole degree square.
 std::shared_ptr<GridHeightDataSource> makeTile(const TileKey& key, double height)
 {
     return std::make_shared<GridHeightDataSource>("test tile",
-                                                  CopernicusDem30HeightDataSource::boundsFor(key),
+                                                  WorldCopernicusDem30HeightDataSource::boundsFor(key),
                                                   2, 2, std::vector<double>(4, height), 30.0);
 }
 
@@ -29,19 +29,19 @@ void testTileKeyNaming()
 
 void testTileKeyFor()
 {
-    const auto key = CopernicusDem30HeightDataSource::tileKeyFor(48.137, 11.575);
+    const auto key = WorldCopernicusDem30HeightDataSource::tileKeyFor(48.137, 11.575);
     CHECK_EQ_INT(key.latDeg, 48);
     CHECK_EQ_INT(key.lonDeg, 11);
 
     // Negative coordinates round towards the south west corner.
-    const auto south = CopernicusDem30HeightDataSource::tileKeyFor(-33.45, -70.66);
+    const auto south = WorldCopernicusDem30HeightDataSource::tileKeyFor(-33.45, -70.66);
     CHECK_EQ_INT(south.latDeg, -34);
     CHECK_EQ_INT(south.lonDeg, -71);
 }
 
 void testCoverageIsGlobal()
 {
-    const CopernicusDem30HeightDataSource source({});
+    const WorldCopernicusDem30HeightDataSource source({});
     CHECK_TRUE(source.covers(48.0, 11.0));
     CHECK_TRUE(source.covers(-45.0, 170.0));
     CHECK_FALSE(source.covers(95.0, 11.0));
@@ -51,7 +51,7 @@ void testCoverageIsGlobal()
 
 void testSamplingUsesTheMatchingTile()
 {
-    CopernicusDem30HeightDataSource source([](const TileKey& key) {
+    WorldCopernicusDem30HeightDataSource source([](const TileKey& key) {
         return makeTile(key, key.latDeg == 48 && key.lonDeg == 11 ? 500.0 : 100.0);
     });
 
@@ -66,7 +66,7 @@ void testSamplingUsesTheMatchingTile()
 void testTilesAreCached()
 {
     int loads = 0;
-    CopernicusDem30HeightDataSource source([&](const TileKey& key) {
+    WorldCopernicusDem30HeightDataSource source([&](const TileKey& key) {
         ++loads;
         return makeTile(key, 42.0);
     });
@@ -77,7 +77,7 @@ void testTilesAreCached()
     CHECK_EQ_INT(loads, 1);
 
     int missingLoads = 0;
-    CopernicusDem30HeightDataSource ocean([&](const TileKey&) {
+    WorldCopernicusDem30HeightDataSource ocean([&](const TileKey&) {
         ++missingLoads;
         return nullptr;
     });
@@ -89,14 +89,14 @@ void testTilesAreCached()
 
 void testMissingTileFails()
 {
-    CopernicusDem30HeightDataSource source([](const TileKey&) { return nullptr; });
+    WorldCopernicusDem30HeightDataSource source([](const TileKey&) { return nullptr; });
     double height = 123.0;
     CHECK_FALSE(source.sampleHeight(48.5, 11.5, height));
 }
 
 void testWithoutLoader()
 {
-    const CopernicusDem30HeightDataSource source({});
+    const WorldCopernicusDem30HeightDataSource source({});
     double height = 0.0;
     CHECK_FALSE(source.sampleHeight(48.5, 11.5, height));
 }
@@ -105,7 +105,7 @@ void testWithoutLoader()
 /// containing tile is unavailable.
 void testBorderFallsBackToNeighbour()
 {
-    CopernicusDem30HeightDataSource source([](const TileKey& key) {
+    WorldCopernicusDem30HeightDataSource source([](const TileKey& key) {
         if (key.latDeg == 48 && key.lonDeg == 11) {
             return std::shared_ptr<GridHeightDataSource>();
         }
@@ -119,7 +119,7 @@ void testBorderFallsBackToNeighbour()
 
 void testBoundsFor()
 {
-    const auto bounds = CopernicusDem30HeightDataSource::boundsFor(TileKey{48, 11});
+    const auto bounds = WorldCopernicusDem30HeightDataSource::boundsFor(TileKey{48, 11});
     CHECK_NEAR(bounds.minLatitudeDeg, 48.0, 1e-9);
     CHECK_NEAR(bounds.maxLatitudeDeg, 49.0, 1e-9);
     CHECK_NEAR(bounds.minLongitudeDeg, 11.0, 1e-9);
@@ -139,5 +139,5 @@ int main()
     testWithoutLoader();
     testBorderFallsBackToNeighbour();
     testBoundsFor();
-    return geotest::summarize("CopernicusDem30HeightDataSourceTests");
+    return geotest::summarize("WorldCopernicusDem30HeightDataSourceTests");
 }

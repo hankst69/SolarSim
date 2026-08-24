@@ -1,4 +1,4 @@
-#include "geolib/data_sources/CopernicusDem30TileReader.h"
+#include "geolib/data_sources/WorldCopernicusDem30TileReader.h"
 
 #include "TestSupport.h"
 
@@ -34,7 +34,7 @@ void testReadHgt()
 
     const GeoBounds bounds{48.0, 49.0, 11.0, 12.0};
     std::string error;
-    const auto tile = CopernicusDem30TileReader::readFile(path, bounds, &error);
+    const auto tile = WorldCopernicusDem30TileReader::readFile(path, bounds, &error);
     CHECK_TRUE(tile != nullptr);
     if (tile) {
         CHECK_EQ_INT(tile->columns(), 3);
@@ -68,7 +68,7 @@ void testNegativeHeights()
     std::istringstream stream(raw, std::ios::binary);
 
     const GeoBounds bounds{31.0, 32.0, 35.0, 36.0};
-    const auto tile = CopernicusDem30TileReader::readHgt(stream, bounds);
+    const auto tile = WorldCopernicusDem30TileReader::readHgt(stream, bounds);
     CHECK_TRUE(tile != nullptr);
     if (tile) {
         double height = 0.0;
@@ -92,7 +92,7 @@ void testReadAsciiGrid()
                               "30 31 32\n");
 
     std::string error;
-    const auto tile = CopernicusDem30TileReader::readAsciiGrid(stream, &error);
+    const auto tile = WorldCopernicusDem30TileReader::readAsciiGrid(stream, &error);
     CHECK_TRUE(tile != nullptr);
     if (tile) {
         CHECK_EQ_INT(tile->columns(), 3);
@@ -117,7 +117,7 @@ void testNoDataIsRejected()
                               "NODATA_value -32768\n"
                               "10 -32768\n"
                               "10 10\n");
-    const auto tile = CopernicusDem30TileReader::readAsciiGrid(stream);
+    const auto tile = WorldCopernicusDem30TileReader::readAsciiGrid(stream);
     CHECK_TRUE(tile != nullptr);
     if (tile) {
         double height = 0.0;
@@ -129,22 +129,22 @@ void testMalformedInput()
 {
     std::string error;
     std::istringstream odd(std::string("\x01\x02\x03", 3), std::ios::binary);
-    CHECK_TRUE(CopernicusDem30TileReader::readHgt(odd, GeoBounds{}, &error) == nullptr);
+    CHECK_TRUE(WorldCopernicusDem30TileReader::readHgt(odd, GeoBounds{}, &error) == nullptr);
     CHECK_FALSE(error.empty());
 
     error.clear();
     // 6 samples cannot form a square raster.
     std::istringstream nonSquare(std::string(12, '\0'), std::ios::binary);
-    CHECK_TRUE(CopernicusDem30TileReader::readHgt(nonSquare, GeoBounds{}, &error) == nullptr);
+    CHECK_TRUE(WorldCopernicusDem30TileReader::readHgt(nonSquare, GeoBounds{}, &error) == nullptr);
     CHECK_FALSE(error.empty());
 
     error.clear();
     std::istringstream truncated("ncols 3\nnrows 3\nxllcorner 11\nyllcorner 48\ncellsize 0.5\n1 2\n");
-    CHECK_TRUE(CopernicusDem30TileReader::readAsciiGrid(truncated, &error) == nullptr);
+    CHECK_TRUE(WorldCopernicusDem30TileReader::readAsciiGrid(truncated, &error) == nullptr);
     CHECK_FALSE(error.empty());
 
     error.clear();
-    const auto missing = CopernicusDem30TileReader::readFile("does_not_exist.hgt", GeoBounds{}, &error);
+    const auto missing = WorldCopernicusDem30TileReader::readFile("does_not_exist.hgt", GeoBounds{}, &error);
     CHECK_TRUE(missing == nullptr);
     CHECK_FALSE(error.empty());
 }
@@ -158,5 +158,5 @@ int main()
     testReadAsciiGrid();
     testNoDataIsRejected();
     testMalformedInput();
-    return geotest::summarize("CopernicusDem30TileReaderTests");
+    return geotest::summarize("WorldCopernicusDem30TileReaderTests");
 }

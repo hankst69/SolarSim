@@ -1,4 +1,4 @@
-#include "geolib/data_sources/CopernicusDem30HeightDataSource.h"
+#include "geolib/data_sources/WorldCopernicusDem30HeightDataSource.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -21,18 +21,18 @@ std::string degreeLabel(int value, char positive, char negative, int width)
 
 } // namespace
 
-std::string CopernicusDem30HeightDataSource::TileKey::toString() const
+std::string WorldCopernicusDem30HeightDataSource::TileKey::toString() const
 {
     return degreeLabel(latDeg, 'N', 'S', 2) + "_" + degreeLabel(lonDeg, 'E', 'W', 3);
 }
 
-CopernicusDem30HeightDataSource::CopernicusDem30HeightDataSource(TileLoader loader)
+WorldCopernicusDem30HeightDataSource::WorldCopernicusDem30HeightDataSource(TileLoader loader)
     : m_loader(std::move(loader))
 {
 }
 
-CopernicusDem30HeightDataSource::TileKey
-CopernicusDem30HeightDataSource::tileKeyFor(double latitudeDeg, double longitudeDeg)
+WorldCopernicusDem30HeightDataSource::TileKey
+WorldCopernicusDem30HeightDataSource::tileKeyFor(double latitudeDeg, double longitudeDeg)
 {
     TileKey key;
     key.latDeg = static_cast<int>(std::floor(latitudeDeg));
@@ -40,14 +40,14 @@ CopernicusDem30HeightDataSource::tileKeyFor(double latitudeDeg, double longitude
     return key;
 }
 
-GeoBounds CopernicusDem30HeightDataSource::boundsFor(const TileKey& key)
+GeoBounds WorldCopernicusDem30HeightDataSource::boundsFor(const TileKey& key)
 {
     return {static_cast<double>(key.latDeg), static_cast<double>(key.latDeg) + 1.0,
             static_cast<double>(key.lonDeg), static_cast<double>(key.lonDeg) + 1.0};
 }
 
 std::shared_ptr<GridHeightDataSource>
-CopernicusDem30HeightDataSource::tile(const TileKey& key) const
+WorldCopernicusDem30HeightDataSource::tile(const TileKey& key) const
 {
     const auto it = m_tiles.find(key);
     if (it != m_tiles.end()) {
@@ -61,7 +61,7 @@ CopernicusDem30HeightDataSource::tile(const TileKey& key) const
     return loaded;
 }
 
-bool CopernicusDem30HeightDataSource::sampleHeight(double latitudeDeg, double longitudeDeg,
+bool WorldCopernicusDem30HeightDataSource::sampleHeight(double latitudeDeg, double longitudeDeg,
                                                    double& heightM) const
 {
     if (!covers(latitudeDeg, longitudeDeg)) {

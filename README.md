@@ -53,9 +53,9 @@ covers:
 | `tests/geolib/data_sources/GermanyDgm5TileReaderTests.cpp` | `GermanyDgm5TileReader` |
 | `tests/geolib/data_sources/GermanyDgm5HeightDataSourceTests.cpp` | `GermanyDgm5HeightDataSource` |
 | `tests/geolib/data_sources/GermanyDgm5TileDownloaderTests.cpp` | `GermanyDgm5TileDownloader` |
-| `tests/geolib/data_sources/CopernicusDem30TileReaderTests.cpp` | `CopernicusDem30TileReader` |
-| `tests/geolib/data_sources/CopernicusDem30HeightDataSourceTests.cpp` | `CopernicusDem30HeightDataSource` |
-| `tests/geolib/data_sources/CopernicusDem30TileDownloaderTests.cpp` | `CopernicusDem30TileDownloader` |
+| `tests/geolib/data_sources/WorldCopernicusDem30TileReaderTests.cpp` | `WorldCopernicusDem30TileReader` |
+| `tests/geolib/data_sources/WorldCopernicusDem30HeightDataSourceTests.cpp` | `WorldCopernicusDem30HeightDataSource` |
+| `tests/geolib/data_sources/WorldCopernicusDem30TileDownloaderTests.cpp` | `WorldCopernicusDem30TileDownloader` |
 | `tests/geolib/data_sources/BngGridTileTests.cpp` | `BngGridTile` |
 | `tests/geolib/data_sources/UkEaLidarTileReaderTests.cpp` | `UkEaLidarTileReader` |
 | `tests/geolib/data_sources/UkEaLidarHeightDataSourceTests.cpp` | `UkEaLidarHeightDataSource` |
@@ -105,9 +105,9 @@ injected loader/fetch callbacks, so nothing ever touches the network.
 | `GermanyDgm5HeightDataSource` | `data_sources/GermanyDgm5HeightDataSource.h` | Nation wide German BKG DGM5 (5 m) source with UTM32 tiling. |
 | `GermanyDgm5TileReader` | `data_sources/GermanyDgm5TileReader.h` | Parser for the DGM5 tile files (XYZ incl. decimal comma, and ESRI ASCII grid). |
 | `GermanyDgm5TileDownloader` | `data_sources/GermanyDgm5TileDownloader.h` | Tile naming, local cache and download of DGM5 tiles. |
-| `CopernicusDem30HeightDataSource` | `data_sources/CopernicusDem30HeightDataSource.h` | Global Copernicus DEM GLO-30 (30 m) source with 1 deg tiling. |
-| `CopernicusDem30TileReader` | `data_sources/CopernicusDem30TileReader.h` | Parser for the GLO-30 tile files (HGT and ESRI ASCII grid). |
-| `CopernicusDem30TileDownloader` | `data_sources/CopernicusDem30TileDownloader.h` | Tile naming, local cache and download of GLO-30 tiles. |
+| `WorldCopernicusDem30HeightDataSource` | `data_sources/WorldCopernicusDem30HeightDataSource.h` | Global Copernicus DEM GLO-30 (30 m) source with 1 deg tiling. |
+| `WorldCopernicusDem30TileReader` | `data_sources/WorldCopernicusDem30TileReader.h` | Parser for the GLO-30 tile files (HGT and ESRI ASCII grid). |
+| `WorldCopernicusDem30TileDownloader` | `data_sources/WorldCopernicusDem30TileDownloader.h` | Tile naming, local cache and download of GLO-30 tiles. |
 | `UkEaLidarHeightDataSource` | `data_sources/UkEaLidarHeightDataSource.h` | Environment Agency LIDAR Composite DTM (1 m) source with BNG tiling. |
 | `UkEaLidarTileReader` | `data_sources/UkEaLidarTileReader.h` | Parser for the EA LIDAR tile files (ESRI ASCII grid and XYZ). |
 | `UkEaLidarTileDownloader` | `data_sources/UkEaLidarTileDownloader.h` | Tile naming, local cache and download of EA LIDAR tiles. |
@@ -381,33 +381,33 @@ The global counterpart follows exactly the same three class pattern, but works
 on the geographic 1 deg x 1 deg tiles of the Copernicus DEM GLO-30 data set
 (ESA/Airbus, ~30 m ground sample distance):
 
-- `CopernicusDem30TileReader` - parses a tile into a `GridHeightDataSource`.
+- `WorldCopernicusDem30TileReader` - parses a tile into a `GridHeightDataSource`.
   Two formats are supported: the plain `HGT` raster many GLO-30 mirrors provide
   (big endian signed 16 bit samples, northernmost row first, square, without
   any georeference, so the bounds are supplied by the caller) and ESRI `ASC`
   ASCII grids in degrees. Both formats already store the northernmost row
   first, which matches the row order of `GridHeightDataSource`.
-- `CopernicusDem30TileDownloader` - builds the official tile name
+- `WorldCopernicusDem30TileDownloader` - builds the official tile name
   (`Copernicus_DSM_COG_10_N48_00_E011_00_DEM`), resolves it against a base URL
   and a local cache directory and hands the parsed tile to the data source via
   `tileLoader()`. As above the HTTP GET is an injected `FetchFunction`.
-- `CopernicusDem30HeightDataSource` - derives the tile key of the containing
+- `WorldCopernicusDem30HeightDataSource` - derives the tile key of the containing
   degree square (`tileKeyFor()`), caches loaded tiles including negative
   results (tiles simply do not exist over open water) and falls back to the
   neighbouring tiles for samples exactly on a tile border.
 
 ```cpp
-#include "geolib/data_sources/CopernicusDem30TileDownloader.h"
+#include "geolib/data_sources/WorldCopernicusDem30TileDownloader.h"
 
-CopernicusDem30TileDownloader::Config config;
+WorldCopernicusDem30TileDownloader::Config config;
 config.cacheDirectory = "C:/data/glo30";
 
-static CopernicusDem30TileDownloader downloader(config,
+static WorldCopernicusDem30TileDownloader downloader(config,
     [](const std::string& url, const std::string& target) {
         return myHttpGet(url, target);
     });
 
-auto glo30 = std::make_shared<CopernicusDem30HeightDataSource>(downloader.tileLoader());
+auto glo30 = std::make_shared<WorldCopernicusDem30HeightDataSource>(downloader.tileLoader());
 HeightDataSourceRegistry::instance().addSource(glo30);
 ```
 

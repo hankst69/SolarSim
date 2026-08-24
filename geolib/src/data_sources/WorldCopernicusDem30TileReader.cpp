@@ -1,4 +1,4 @@
-#include "geolib/data_sources/CopernicusDem30TileReader.h"
+#include "geolib/data_sources/WorldCopernicusDem30TileReader.h"
 
 #include <algorithm>
 #include <cctype>
@@ -32,7 +32,7 @@ std::string toLower(std::string value)
 
 } // namespace
 
-std::shared_ptr<GridHeightDataSource> CopernicusDem30TileReader::readHgt(std::istream& stream,
+std::shared_ptr<GridHeightDataSource> WorldCopernicusDem30TileReader::readHgt(std::istream& stream,
                                                                         const GeoBounds& bounds,
                                                                         std::string* error)
 {
@@ -67,7 +67,7 @@ std::shared_ptr<GridHeightDataSource> CopernicusDem30TileReader::readHgt(std::is
                                                  side32, std::move(grid), resolutionM, kNoData);
 }
 
-std::shared_ptr<GridHeightDataSource> CopernicusDem30TileReader::readAsciiGrid(std::istream& stream,
+std::shared_ptr<GridHeightDataSource> WorldCopernicusDem30TileReader::readAsciiGrid(std::istream& stream,
                                                                               std::string* error)
 {
     int columns = 0;
@@ -148,7 +148,7 @@ std::shared_ptr<GridHeightDataSource> CopernicusDem30TileReader::readAsciiGrid(s
                                                  cellSize * kMetresPerDegree, noData);
 }
 
-std::shared_ptr<GridHeightDataSource> CopernicusDem30TileReader::readFile(const std::string& path,
+std::shared_ptr<GridHeightDataSource> WorldCopernicusDem30TileReader::readFile(const std::string& path,
                                                                          const GeoBounds& bounds,
                                                                          std::string* error)
 {
