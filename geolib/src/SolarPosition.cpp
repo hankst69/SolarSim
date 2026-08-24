@@ -2,6 +2,12 @@
 
 #include "geolib/Angle.h"
 
+// The calculation below passes through several reference frames: geocentric
+// ecliptic, geocentric equatorial, hour angle and finally the topocentric
+// horizontal frame of the ground plane. See SolarPosition.md in the repository
+// root for a detailed description of these coordinate systems and their
+// origins.
+
 namespace geo {
 namespace {
 

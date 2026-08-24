@@ -76,6 +76,12 @@ equation of time. `direction()` returns the unit vector to the sun in the local
 ENU frame, `projectOnDome()` returns the corresponding point on the dome, and
 `relativeIrradiance()` returns `cos(zenith)` as a first energy measure.
 
+The calculation passes through several reference frames (geocentric ecliptic,
+geocentric equatorial, hour angle and finally the topocentric horizontal frame
+of the ground plane). See [SolarPosition.md](SolarPosition.md) for a detailed
+description of these coordinate systems, their origins and the accuracy
+trade-offs.
+
 ### Sun path
 
 `SunPath` samples a whole UTC day (by default every 10 minutes) and stores the
