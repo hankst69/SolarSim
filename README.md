@@ -27,8 +27,9 @@ cmake --build build
 | --- | --- | --- |
 | `Vector3` | `Vector3.h` | Minimal 3D vector math used for ECEF and local ENU coordinates (metres). |
 | `degToRad` / `radToDeg` | `Angle.h` | Angle conversion helpers and `kPi`. |
-| `EarthModel` | `EarthModel.h` | Abstract earth shape: radii, flattening, local radius of curvature, geodetic to ECEF conversion. |
-| `SphericalEarthModel` | `EarthModel.h` | Earth as a perfect sphere (mean radius 6371008.8 m). The default model. |
+| `EarthModel` | `EarthModel.h` | Abstract earth shape: radii, flattening, radii of curvature, geocentric radius/latitude, geodetic to ECEF conversion. |
+| `SphericalEarthModel` | `EarthModel.h` | Earth as a perfect sphere (mean radius 6371008.8 m). |
+| `WGS84EarthModel` | `EarthModel.h` | Earth as the WGS84 reference ellipsoid (a = 6378137 m, 1/f = 298.257223563). The default model. |
 | `GeoLocation` | `GeoLocation.h` | A point on earth given by latitude/longitude in degrees and altitude in metres. |
 | `GroundPlane` | `GroundPlane.h` | Tangential plane on the earth surface at a `GeoLocation`. |
 | `HorizonDome` | `HorizonDome.h` | Half sphere standing on the ground plane, reaching to the visible horizon. |
@@ -38,10 +39,30 @@ cmake --build build
 
 ### Earth model
 
-The earth is currently modelled as a sphere, which keeps the math simple. All
-computations go through the abstract `EarthModel` interface, so a WGS84
-ellipsoidal model can be added later by implementing that interface; client code
-does not need to change.
+All computations go through the abstract `EarthModel` interface. Two
+implementations are available:
+
+- `WGS84EarthModel` - the WGS84 reference ellipsoid (semi major axis
+  a = 6378137 m, inverse flattening 1/f = 298.257223563). This is the model
+  returned by `EarthModel::defaultModel()` and therefore used by every
+  `GeoLocation` that is created without an explicit model.
+- `SphericalEarthModel` - earth as a perfect sphere (mean radius 6371008.8 m),
+  available via `EarthModel::sphericalModel()` and useful for simple estimates
+  and for comparing the effect of the ellipsoid.
+
+Besides the equatorial and polar radius and the flattening, the interface
+exposes the meridional radius of curvature `M`, the prime vertical radius of
+curvature `N`, the Gaussian mean radius `sqrt(M * N)` as `localRadius()`, the
+geocentric radius of the surface and the geocentric latitude belonging to a
+geodetic latitude. `toEcef()` performs the exact geodetic to ECEF conversion of
+the respective model.
+
+A different model can be passed explicitly:
+
+```cpp
+GeoLocation ellipsoidal(48.1372, 11.5756);                              // WGS84 (default)
+GeoLocation spherical(48.1372, 11.5756, 0.0, EarthModel::sphericalModel());
+```
 
 ### Ground plane
 
@@ -49,6 +70,13 @@ does not need to change.
 surface below the location. Its origin is the standpoint and its axes are the
 local east/north/up (ENU) frame. `GroundPlane` converts between ECEF and this
 local frame and reports the signed height of a point above the plane.
+
+The plane also caches the local radii of curvature of the earth model at its
+origin (`meridionalRadius()`, `primeVerticalRadius()`). Based on them,
+`curvatureDrop(east, north)` returns how far the curved surface falls below the
+tangential plane at a local offset, and `toGeoLocation(local)` maps a local ENU
+coordinate back to latitude/longitude/altitude with the correct north/south and
+east/west scaling of the ellipsoid.
 
 ### Horizon dome
 
@@ -71,9 +99,12 @@ distance along the surface, the earth curvature drop and
 
 `SolarPosition` implements the NOAA solar position algorithm (accuracy of about
 one arc minute). It provides azimuth (clockwise from north), geometric and
-refraction corrected elevation, zenith angle, declination, hour angle and the
-equation of time. `direction()` returns the unit vector to the sun in the local
-ENU frame, `projectOnDome()` returns the corresponding point on the dome, and
+refraction corrected elevation, zenith angle, declination, hour angle, the
+equation of time and the sun distance in astronomical units. The geocentric
+result is converted to the topocentric frame by a diurnal parallax correction
+that uses the ellipsoid terms of the earth model and the observer altitude.
+`direction()` returns the unit vector to the sun in the local ENU frame,
+`projectOnDome()` returns the corresponding point on the dome, and
 `relativeIrradiance()` returns `cos(zenith)` as a first energy measure.
 
 The calculation passes through several reference frames (geocentric ecliptic,
@@ -132,6 +163,5 @@ top of `geolib`. Planned functionality:
 - Shadow casting helpers in `geolib`.
 - Surface/panel model with tilt and azimuth for irradiance calculation.
 - Local time and timezone handling on top of `DateTimeUtc`.
-- WGS84 ellipsoidal `EarthModel` implementation.
 - Unit tests for the geometric and astronomical math.
 - Qt GUI application.
