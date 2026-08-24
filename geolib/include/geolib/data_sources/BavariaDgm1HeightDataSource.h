@@ -1,7 +1,7 @@
 #pragma once
 
-#include "geolib/GridHeightDataSource.h"
 #include "geolib/HeightDataSource.h"
+#include "geolib/data_sources/Utm32GridTile.h"
 
 #include <functional>
 #include <map>
@@ -15,9 +15,9 @@ namespace geo {
 /// fuer Digitalisierung, Breitband und Vermessung (LDBV).
 ///
 /// The data is distributed as 1 km x 1 km tiles in UTM zone 32N (EPSG:25832).
-/// Decoding/downloading of a tile is not part of geolib; the application
-/// supplies a loader callback which turns a tile key into an in-memory raster
-/// (see GridHeightDataSource). Loaded tiles are cached.
+/// Downloading and decoding of a tile is done by BavariaDgm1TileDownloader and
+/// BavariaDgm1TileReader; this class only takes a loader callback which turns a
+/// tile key into a raster. Loaded tiles are cached, including negative results.
 class BavariaDgm1HeightDataSource : public HeightDataSource {
 public:
     /// Key of a DGM1 tile: UTM32 easting/northing of the south west corner in
@@ -36,7 +36,7 @@ public:
     };
 
     /// Loads a single tile. Returns nullptr if the tile is not available.
-    using TileLoader = std::function<std::shared_ptr<GridHeightDataSource>(const TileKey&)>;
+    using TileLoader = std::function<std::shared_ptr<Utm32GridTile>(const TileKey&)>;
 
     explicit BavariaDgm1HeightDataSource(TileLoader loader);
 
@@ -61,10 +61,10 @@ public:
                         double& northingM);
 
 private:
-    std::shared_ptr<GridHeightDataSource> tile(const TileKey& key) const;
+    std::shared_ptr<Utm32GridTile> tile(const TileKey& key) const;
 
     TileLoader m_loader;
-    mutable std::map<TileKey, std::shared_ptr<GridHeightDataSource>> m_tiles;
+    mutable std::map<TileKey, std::shared_ptr<Utm32GridTile>> m_tiles;
 };
 
 } // namespace geo

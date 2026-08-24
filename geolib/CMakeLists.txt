@@ -10,7 +10,11 @@ add_library(geolib
     src/SunPath.cpp
     src/TerrainModel.cpp
     src/TriangleMesh.cpp
+    src/UtmProjection.cpp
     src/data_sources/BavariaDgm1HeightDataSource.cpp
+    src/data_sources/BavariaDgm1TileDownloader.cpp
+    src/data_sources/BavariaDgm1TileReader.cpp
+    src/data_sources/Utm32GridTile.cpp
 )
 
 target_include_directories(geolib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
