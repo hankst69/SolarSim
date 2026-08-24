@@ -16,6 +16,25 @@ cmake -S . -B build
 cmake --build build
 ```
 
+On Windows `scripts/win_build.ps1` wraps both steps (run it from a Visual Studio
+developer prompt so the compiler and Ninja are on `PATH`):
+
+```
+./scripts/win_build.ps1                          # Debug build in build/Debug
+./scripts/win_build.ps1 -Configuration Release   # Release build in build/Release
+./scripts/win_build.ps1 -Clean                   # rebuild from scratch
+./scripts/win_build.ps1 -NoTests                 # library only
+```
+
+On Linux `scripts/linux_build.sh` does the same:
+
+```
+./scripts/linux_build.sh                         # Debug build in build/Debug
+./scripts/linux_build.sh -c Release              # Release build in build/Release
+./scripts/linux_build.sh --clean                 # rebuild from scratch
+./scripts/linux_build.sh --no-tests              # library only
+```
+
 ## Tests
 
 The unit tests are built by default and registered with CTest:
@@ -25,6 +44,24 @@ cmake -S . -B build
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
+
+`scripts/win_test.ps1` (Windows) and `scripts/linux_test.sh` (Linux) build and
+run the suites in one step:
+
+```
+./scripts/win_test.ps1                           # build + run all tests
+./scripts/win_test.ps1 -Filter UsaUsgs3Dep1m     # run a subset (ctest -R)
+./scripts/win_test.ps1 -SkipBuild                # reuse the existing build tree
+```
+
+```
+./scripts/linux_test.sh                          # build + run all tests
+./scripts/linux_test.sh -f UsaUsgs3Dep1m         # run a subset (ctest -R)
+./scripts/linux_test.sh --skip-build             # reuse the existing build tree
+```
+
+Both exit with a non zero code if any suite fails, so they can be used in CI.
+Pass `-h` / `--help` to either script for the full option list.
 
 Set `-DGEOSOLAR_BUILD_TESTS=OFF` to skip them. The test tree mirrors the
 library layout, so a test sits in the same relative place as the code it
