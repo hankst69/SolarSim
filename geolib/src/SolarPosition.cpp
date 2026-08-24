@@ -118,7 +118,9 @@ void SolarPosition::compute()
     const double denom = std::cos(latRad) * std::sin(zenithRad);
     double azimuth = 180.0;
     if (std::fabs(denom) > 1e-12) {
-        double cosAz = (std::sin(latRad) * cosZenith - std::sin(declTopoRad)) / denom;
+        // Azimuth measured clockwise from north:
+        //     cos(Az) = (sin(decl) - sin(lat) * cos(Z)) / (cos(lat) * sin(Z))
+        double cosAz = (std::sin(declTopoRad) - std::sin(latRad) * cosZenith) / denom;
         cosAz = std::fmax(-1.0, std::fmin(1.0, cosAz));
         azimuth = radToDeg(std::acos(cosAz));
         if (m_hourAngleDeg > 0.0) {

@@ -10,13 +10,14 @@ HorizonDome::HorizonDome(const GeoLocation& standpoint, double viewHeightM)
     , m_earthRadiusM(standpoint.earthModel().localRadius(standpoint.latitude()))
 {
     // Viewpoint at height h above the standpoint, tangent line to the earth
-    // sphere of radius R touches the surface at the tangent point T.
-    // The dome radius is the distance from the standpoint to the intersection
-    // of that tangent line with the ground plane:
-    //     r = R * sqrt(h * (2R + h)) / (2R + h)
+    // sphere of radius R touches the surface at the tangent point T. Seen from
+    // the earth centre the tangent point lies at the angle theta with
+    // cos(theta) = R / (R + h). The dome radius is the distance from the
+    // standpoint to T measured in the ground plane, i.e. R * sin(theta):
+    //     r = R * sqrt(h * (2R + h)) / (R + h)
     const double R = m_earthRadiusM;
     const double h = m_viewHeightM;
-    m_radiusM = (h > 0.0) ? R * std::sqrt(h * (2.0 * R + h)) / (2.0 * R + h) : 0.0;
+    m_radiusM = (h > 0.0) ? R * std::sqrt(h * (2.0 * R + h)) / (R + h) : 0.0;
 }
 
 double HorizonDome::lineOfSightDistance() const

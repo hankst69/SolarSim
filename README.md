@@ -32,7 +32,19 @@ covers:
 
 | Test suite | Covers |
 | --- | --- |
+| `tests/geolib/AngleTests.cpp` | `degToRad` / `radToDeg` / `kPi` |
+| `tests/geolib/Vector3Tests.cpp` | `Vector3` |
+| `tests/geolib/DateTimeUtcTests.cpp` | `DateTimeUtc` |
+| `tests/geolib/EarthModelTests.cpp` | `EarthModel`, `SphericalEarthModel`, `WGS84EarthModel` |
+| `tests/geolib/GeoLocationTests.cpp` | `GeoLocation` |
+| `tests/geolib/GroundPlaneTests.cpp` | `GroundPlane` |
+| `tests/geolib/HorizonDomeTests.cpp` | `HorizonDome` |
 | `tests/geolib/UtmProjectionTests.cpp` | `UtmProjection` / `Utm32Projection` |
+| `tests/geolib/SolarPositionTests.cpp` | `SolarPosition` |
+| `tests/geolib/SunPathTests.cpp` | `SunPath` |
+| `tests/geolib/TriangleMeshTests.cpp` | `TriangleMesh` |
+| `tests/geolib/HeightDataSourceTests.cpp` | `GeoBounds`, `FlatHeightDataSource`, `GridHeightDataSource`, `HeightDataSourceRegistry` |
+| `tests/geolib/TerrainModelTests.cpp` | `TerrainModel` |
 | `tests/geolib/data_sources/Utm32GridTileTests.cpp` | `Utm32GridTile` |
 | `tests/geolib/data_sources/BavariaDgm1TileReaderTests.cpp` | `BavariaDgm1TileReader` |
 | `tests/geolib/data_sources/BavariaDgm1HeightDataSourceTests.cpp` | `BavariaDgm1HeightDataSource` |
@@ -41,8 +53,10 @@ covers:
 Each suite is a small standalone executable that prints its failures and
 returns a non zero exit code. `tests/TestSupport.h` provides the `CHECK_*`
 assertion macros, so the tests stay as dependency free as the library itself.
-The data source and downloader tests use injected loader/fetch callbacks and
-therefore never touch the network.
+The astronomical suites check against published reference values (solstice
+declinations, the equation of time, sunrise/sunset times, perihelion and
+aphelion distances), and the terrain suites use analytic height sources plus
+injected loader/fetch callbacks, so nothing ever touches the network.
 
 ## geolib
 
@@ -401,5 +415,4 @@ top of `geolib`. Planned functionality:
 - Import of detailed building models (for example CityGML LoD2 or OBJ).
 - Surface/panel model with tilt and azimuth for irradiance calculation.
 - Local time and timezone handling on top of `DateTimeUtc`.
-- Unit tests for the geometric and astronomical math.
 - Qt GUI application.
