@@ -36,6 +36,14 @@ cmake --build build
 | `DateTimeUtc` | `DateTimeUtc.h` | UTC date/time with Julian day and Julian century conversion. |
 | `SolarPosition` | `SolarPosition.h` | Sun position for a location and UTC time, projected onto the dome. |
 | `SunPath` | `SunPath.h` | Samples `SolarPosition` across a day to produce the sun arc on the dome. |
+| `TriangleMesh` | `TriangleMesh.h` | Indexed triangle mesh in the local ENU frame with ray/triangle intersection. |
+| `TerrainModel` | `TerrainModel.h` | Height field of the ground plane built from height data, plus shadow queries. |
+| `GeoBounds` | `HeightDataSource.h` | Latitude/longitude bounding box describing the coverage of a data source. |
+| `HeightDataSource` | `HeightDataSource.h` | Abstract provider of terrain heights (digital elevation/terrain model). |
+| `FlatHeightDataSource` | `GridHeightDataSource.h` | World wide fallback source returning a constant height. |
+| `GridHeightDataSource` | `GridHeightDataSource.h` | Height source backed by an in-memory latitude/longitude raster. |
+| `HeightDataSourceRegistry` | `HeightDataSourceRegistry.h` | Registry of data sources with location based source selection. |
+| `BavariaDgm1HeightDataSource` | `BavariaDgm1HeightDataSource.h` | Bavarian open data DGM1 (1 m) source with UTM32 tiling. |
 
 ### Earth model
 
@@ -120,6 +128,108 @@ time, the `SolarPosition` and the dome point of every sample. It offers the
 visible arc as a point list for rendering, sunrise and sunset times refined by
 bisection, the solar noon sample and a relative daily energy value.
 
+### Height data sources
+
+Terrain heights are read through the abstract `HeightDataSource` interface. A
+source reports its `name()`, the geographic area it can deliver values for
+(`coverage()` as a `GeoBounds` box), its nominal ground sample distance
+(`resolutionM()`) and answers `sampleHeight(lat, lon, height)` with the height
+in metres above the reference surface. Returning `false` marks a data gap, a
+missing tile or a location outside the coverage.
+
+Two generic implementations are provided:
+
+- `FlatHeightDataSource` - constant height for the whole world, used as a
+  fallback when no real elevation data is available.
+- `GridHeightDataSource` - a regular latitude/longitude raster held in memory
+  with bilinear interpolation and no-data handling. Row 0 is the northernmost
+  row, which matches the layout of most DEM raster formats. Decoding and
+  downloading of a data set is deliberately outside of `geolib`: an application
+  specific reader (GeoTIFF, XYZ, HGT, ...) produces the raster and hands it to
+  this class.
+
+#### Source selection
+
+`HeightDataSourceRegistry` holds the available sources and selects one for a
+given standpoint. `sourcesFor(lat, lon)` returns all sources covering the
+location sorted by resolution (finest first), `selectSource()` returns the best
+one or `nullptr`. The registry returned by `instance()` is pre-filled with the
+flat fallback source; applications add their own sources on top:
+
+```cpp
+auto& registry = HeightDataSourceRegistry::instance();
+registry.addSource(std::make_shared<BavariaDgm1HeightDataSource>(myTileLoader));
+
+HeightDataSourcePtr source = registry.selectSource(home);
+```
+
+#### Bavaria DGM1
+
+`BavariaDgm1HeightDataSource` wraps the open data set "openData Digitales
+Geländemodell 1m (DGM1)" of the Landesamt für Digitalisierung, Breitband und
+Vermessung (LDBV). The data is distributed as 1 km x 1 km tiles in UTM zone 32N
+(EPSG:25832). The class projects a geodetic coordinate to UTM32
+(`toUtm32()`), derives the tile of the official file naming scheme
+(`tileKeyFor()`, e.g. `690_5334`) and asks a user supplied `TileLoader`
+callback for the corresponding `GridHeightDataSource`. Loaded tiles are cached,
+including negative results.
+
+#### Other data sets
+
+The same pattern can be used for other regions. Suggested open data sets:
+
+| Area | Data set | Resolution |
+| --- | --- | --- |
+| Bavaria (DE) | LDBV openData DGM1 | 1 m |
+| Germany | BKG DGM5 / DGM10 | 5 m / 10 m |
+| Austria | data.gv.at ALS DGM | 1 m |
+| Switzerland | swissALTI3D | 0.5 m |
+| France | IGN RGE ALTI | 1 m |
+| Netherlands | AHN | 0.5 m |
+| United Kingdom | Environment Agency LIDAR | 1 m |
+| Sweden / Norway / Finland | Lantmäteriet, Kartverket, NLS LiDAR | 1-2 m |
+| USA | USGS 3DEP | 1 m / 10 m |
+| Canada | HRDEM | 1-2 m |
+| Europe | EU-DEM (Copernicus Land Monitoring Service) | 25 m |
+| World | Copernicus DEM GLO-30, NASADEM / SRTM, ALOS AW3D30, ASTER GDEM | 30 m |
+
+### Terrain model and shadows
+
+`TerrainModel` turns a `HeightDataSource` into the 3D topology of the ground
+plane. It samples the source on a regular grid in the local ENU frame and
+builds a triangle mesh from it. The modelled area is limited to the extent of
+the ground plane covered by the `HorizonDome`: the half size of the grid never
+exceeds `HorizonDome::radius()`, and with `clipToDomeCircle` the area is cut to
+the circular dome footprint instead of a square. `Config` further controls the
+grid spacing, an upper limit of samples per axis (the spacing is coarsened
+automatically if needed) and whether the earth `curvatureDrop()` is subtracted
+from the sampled heights. Grid points without data are skipped, so holes in the
+data set simply produce holes in the mesh.
+
+Heights are stored relative to the ground plane. `heightAt(east, north)`
+interpolates the grid bilinearly and `surfacePoint()` returns the corresponding
+ENU point.
+
+On top of the topology an optional detailed building model can be placed in the
+centre of the ground plane. `setBuildingModel(mesh, east, north)` takes a
+`TriangleMesh` in its own local ENU coordinates and lifts it onto the terrain
+height of the given footprint centre; `setBuildingBox()` is a shortcut for a
+simple box shaped placeholder. Terrain and building are merged into
+`sceneMesh()`, ready for rendering and ray casting.
+
+Shadow casting traces a ray from a surface point towards the sun against that
+scene mesh: `isInShadow(point, sunDirection)` and
+`isSurfaceInShadow(east, north, sunDirection)` take the unit sun vector of
+`SolarPosition::direction()` and report whether the terrain or the building
+blocks it. A sun below the ground plane always counts as shadowed.
+
+`TriangleMesh` itself is a small indexed mesh with `addVertex()`/`addTriangle()`,
+`append()` for merging (optionally translated), an axis aligned `bounds()`
+query, the `createBox()` helper and a Möller-Trumbore based `intersect()` /
+`isOccluded()`. The intersection test is a linear scan over all triangles, which
+is fine for interactive queries but should be replaced by a spatial acceleration
+structure before computing dense shadow maps over a full day.
+
 ### Example
 
 ```cpp
@@ -142,6 +252,26 @@ SolarPosition noon = path.highestSample().position;
 double elevation = noon.elevation();
 ```
 
+Terrain topology and shadow casting:
+
+```cpp
+#include "geolib/HeightDataSourceRegistry.h"
+#include "geolib/TerrainModel.h"
+
+HeightDataSourcePtr source =
+    HeightDataSourceRegistry::instance().selectSource(home);
+
+TerrainModel::Config config;
+config.extentM = 500.0;        // 500 m around the standpoint
+config.gridSpacingM = 1.0;     // DGM1 native resolution
+
+TerrainModel terrain(dome, source, config);
+terrain.setBuildingBox(12.0, 8.0, 9.0);   // 12 x 8 m house, 9 m high
+
+const Vector3 sun = noon.direction();
+bool shadowed = terrain.isSurfaceInShadow(20.0, -15.0, sun);
+```
+
 ## GUI application (planned)
 
 A Qt based desktop application will be added as a second CMake subdirectory on
@@ -150,9 +280,8 @@ top of `geolib`. Planned functionality:
 - Input of the location (latitude/longitude or map picking) and of the date.
 - 3D view of the ground plane and the horizon dome with the sun path arc of the
   selected day and a draggable time slider.
+- Rendering of the `TerrainModel` mesh and of the building model.
 - Placement of simple obstacle geometry (buildings, trees) on the ground plane.
-- Shadow casting from `SolarPosition::direction()` onto the ground plane and
-  onto the placed geometry.
 - Energy level diagram over the day, based on the sun elevation and the shading
   of a configurable surface (for example a solar panel with a given tilt and
   orientation).
@@ -160,7 +289,9 @@ top of `geolib`. Planned functionality:
 
 ## Roadmap
 
-- Shadow casting helpers in `geolib`.
+- Readers/downloaders for concrete height data sets (DGM1 tiles, GeoTIFF, HGT).
+- Spatial acceleration structure (BVH) for the mesh ray casting.
+- Import of detailed building models (for example CityGML LoD2 or OBJ).
 - Surface/panel model with tilt and azimuth for irradiance calculation.
 - Local time and timezone handling on top of `DateTimeUtc`.
 - Unit tests for the geometric and astronomical math.
