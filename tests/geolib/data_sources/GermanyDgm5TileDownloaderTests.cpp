@@ -1,4 +1,4 @@
-#include "geolib/data_sources/BkgDgm5TileDownloader.h"
+#include "geolib/data_sources/GermanyDgm5TileDownloader.h"
 
 #include "TestSupport.h"
 
@@ -11,7 +11,7 @@ using namespace geo;
 
 namespace {
 
-using TileKey = BkgDgm5TileDownloader::TileKey;
+using TileKey = GermanyDgm5TileDownloader::TileKey;
 
 const char* kCacheDir = "dgm5_test_cache";
 
@@ -43,9 +43,9 @@ void removeCache()
     }
 }
 
-BkgDgm5TileDownloader::Config makeConfig()
+GermanyDgm5TileDownloader::Config makeConfig()
 {
-    BkgDgm5TileDownloader::Config config;
+    GermanyDgm5TileDownloader::Config config;
     config.cacheDirectory = kCacheDir;
     config.baseUrl = "https://example.invalid/dgm5";
     return config;
@@ -53,7 +53,7 @@ BkgDgm5TileDownloader::Config makeConfig()
 
 void testFileNaming()
 {
-    const BkgDgm5TileDownloader downloader(makeConfig());
+    const GermanyDgm5TileDownloader downloader(makeConfig());
     CHECK_EQ_STR(downloader.fileNameFor(TileKey{690, 5334}), "dgm5_32_690_5334_2.xyz");
     CHECK_EQ_STR(downloader.urlFor(TileKey{690, 5334}),
                  "https://example.invalid/dgm5/dgm5_32_690_5334_2.xyz");
@@ -66,14 +66,14 @@ void testUrlWithTrailingSlash()
 {
     auto config = makeConfig();
     config.baseUrl = "https://example.invalid/dgm5/";
-    const BkgDgm5TileDownloader downloader(config);
+    const GermanyDgm5TileDownloader downloader(config);
     CHECK_EQ_STR(downloader.urlFor(TileKey{690, 5334}),
                  "https://example.invalid/dgm5/dgm5_32_690_5334_2.xyz");
 }
 
 void testDefaultConfig()
 {
-    const BkgDgm5TileDownloader downloader;
+    const GermanyDgm5TileDownloader downloader;
     CHECK_TRUE(downloader.config().allowDownload);
     CHECK_FALSE(downloader.config().cacheDirectory.empty());
 }
@@ -84,7 +84,7 @@ void testCachedFileIsUsedWithoutDownload()
     const TileKey key{690, 5334};
 
     int fetchCalls = 0;
-    BkgDgm5TileDownloader downloader(makeConfig(),
+    GermanyDgm5TileDownloader downloader(makeConfig(),
                                      [&](const std::string&, const std::string& target) {
                                          ++fetchCalls;
                                          writeXyzTile(target, 690000.0, 5334000.0, 456.0);
@@ -116,7 +116,7 @@ void testDownloadDisabled()
     config.allowDownload = false;
 
     int fetchCalls = 0;
-    const BkgDgm5TileDownloader downloader(config, [&](const std::string&, const std::string&) {
+    const GermanyDgm5TileDownloader downloader(config, [&](const std::string&, const std::string&) {
         ++fetchCalls;
         return true;
     });
@@ -131,7 +131,7 @@ void testDownloadDisabled()
 void testMissingFetchFunction()
 {
     removeCache();
-    const BkgDgm5TileDownloader downloader(makeConfig());
+    const GermanyDgm5TileDownloader downloader(makeConfig());
     std::string localPath;
     std::string error;
     CHECK_FALSE(downloader.ensureLocalFile(TileKey{692, 5334}, localPath, &error));
@@ -141,7 +141,7 @@ void testMissingFetchFunction()
 void testFailedDownloadReportsError()
 {
     removeCache();
-    const BkgDgm5TileDownloader downloader(makeConfig(),
+    const GermanyDgm5TileDownloader downloader(makeConfig(),
                                            [](const std::string&, const std::string&) {
                                                return false; // simulate a 404
                                            });
@@ -155,7 +155,7 @@ void testFailedDownloadReportsError()
 void testLyingFetchIsDetected()
 {
     removeCache();
-    const BkgDgm5TileDownloader downloader(makeConfig(),
+    const GermanyDgm5TileDownloader downloader(makeConfig(),
                                            [](const std::string&, const std::string&) {
                                                return true; // but no file is created
                                            });
@@ -168,7 +168,7 @@ void testLyingFetchIsDetected()
 void testTileLoaderIntegration()
 {
     removeCache();
-    BkgDgm5TileDownloader downloader(makeConfig(),
+    GermanyDgm5TileDownloader downloader(makeConfig(),
                                      [](const std::string&, const std::string& target) {
                                          writeXyzTile(target, 690000.0, 5334000.0, 321.0);
                                          return true;
@@ -186,7 +186,7 @@ void testTileLoaderIntegration()
     removeCache();
 
     // An unavailable tile must surface as a null pointer, not as an empty tile.
-    BkgDgm5TileDownloader failing(makeConfig(),
+    GermanyDgm5TileDownloader failing(makeConfig(),
                                   [](const std::string&, const std::string&) { return false; });
     CHECK_TRUE(failing.tileLoader()(TileKey{691, 5334}) == nullptr);
 }
@@ -204,5 +204,5 @@ int main()
     testFailedDownloadReportsError();
     testLyingFetchIsDetected();
     testTileLoaderIntegration();
-    return geotest::summarize("BkgDgm5TileDownloaderTests");
+    return geotest::summarize("GermanyDgm5TileDownloaderTests");
 }

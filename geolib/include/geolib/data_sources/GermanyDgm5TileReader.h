@@ -21,8 +21,8 @@ namespace geo {
 /// Unlike the DGM1 tiles the samples may carry a decimal comma in some German
 /// exports; such values are normalised while parsing.
 ///
-/// The reader only parses; downloading is handled by BkgDgm5TileDownloader.
-class BkgDgm5TileReader {
+/// The reader only parses; downloading is handled by GermanyDgm5TileDownloader.
+class GermanyDgm5TileReader {
 public:
     /// Auto detects the format from the file extension (".asc" -> ASCII grid,
     /// everything else -> XYZ) and reads the tile.

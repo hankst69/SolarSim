@@ -16,14 +16,14 @@ namespace geo {
 ///
 /// The data is distributed as 1 km x 1 km tiles in UTM zone 32N (EPSG:25832)
 /// with a 5 m grid spacing. Downloading and decoding of a tile is done by
-/// BkgDgm5TileDownloader and BkgDgm5TileReader; this class only takes a loader
-/// callback which turns a tile key into a raster. Loaded tiles are cached,
-/// including negative results.
+/// GermanyDgm5TileDownloader and GermanyDgm5TileReader; this class only takes
+/// a loader callback which turns a tile key into a raster. Loaded tiles are
+/// cached, including negative results.
 ///
 /// Compared to the state data sets (e.g. BavariaDgm1HeightDataSource) this
 /// source is coarser but covers all of Germany, so the registry picks it up
 /// wherever no 1 m model is registered.
-class BkgDgm5HeightDataSource : public HeightDataSource {
+class GermanyDgm5HeightDataSource : public HeightDataSource {
 public:
     /// Key of a DGM5 tile: UTM32 easting/northing of the south west corner in
     /// full kilometres, as used in the official file names
@@ -43,7 +43,7 @@ public:
     /// Loads a single tile. Returns nullptr if the tile is not available.
     using TileLoader = std::function<std::shared_ptr<Utm32GridTile>(const TileKey&)>;
 
-    explicit BkgDgm5HeightDataSource(TileLoader loader);
+    explicit GermanyDgm5HeightDataSource(TileLoader loader);
 
     std::string name() const override
     {

@@ -1,4 +1,4 @@
-#include "geolib/data_sources/BkgDgm5TileReader.h"
+#include "geolib/data_sources/GermanyDgm5TileReader.h"
 
 #include "TestSupport.h"
 
@@ -29,7 +29,7 @@ void testReadXyz()
     std::istringstream stream(makeXyz(690000, 5334000));
     Utm32GridTile tile;
     std::string error;
-    CHECK_TRUE(BkgDgm5TileReader::readXyz(stream, tile, &error));
+    CHECK_TRUE(GermanyDgm5TileReader::readXyz(stream, tile, &error));
     CHECK_EQ_INT(tile.columns(), 3);
     CHECK_EQ_INT(tile.rows(), 3);
     // The 5 m grid spacing must be derived from the samples.
@@ -54,7 +54,7 @@ void testXyzSeparatorsAndDecimalComma()
                                     "690000 5334005 3,5\n"
                                     "690005 5334005 4,5\n");
     Utm32GridTile tile;
-    CHECK_TRUE(BkgDgm5TileReader::readXyz(decimalComma, tile));
+    CHECK_TRUE(GermanyDgm5TileReader::readXyz(decimalComma, tile));
     double height = 0.0;
     CHECK_TRUE(tile.sampleUtm(690005.0, 5334005.0, height));
     CHECK_NEAR(height, 4.5, 1e-12);
@@ -65,7 +65,7 @@ void testXyzSeparatorsAndDecimalComma()
                                  "690000,5334005,3\n"
                                  "690005,5334005,4\n");
     Utm32GridTile commaTile;
-    CHECK_TRUE(BkgDgm5TileReader::readXyz(separated, commaTile));
+    CHECK_TRUE(GermanyDgm5TileReader::readXyz(separated, commaTile));
     CHECK_TRUE(commaTile.sampleUtm(690005.0, 5334005.0, height));
     CHECK_NEAR(height, 4.0, 1e-12);
 
@@ -74,7 +74,7 @@ void testXyzSeparatorsAndDecimalComma()
                                   "690000;5334005;3\n"
                                   "690005;5334005;4\n");
     Utm32GridTile semicolonTile;
-    CHECK_TRUE(BkgDgm5TileReader::readXyz(semicolons, semicolonTile));
+    CHECK_TRUE(GermanyDgm5TileReader::readXyz(semicolons, semicolonTile));
     CHECK_TRUE(semicolonTile.sampleUtm(690000.0, 5334005.0, height));
     CHECK_NEAR(height, 3.0, 1e-12);
 }
@@ -92,7 +92,7 @@ void testReadAsciiGrid()
                               "10 11 12\n");
     Utm32GridTile tile;
     std::string error;
-    CHECK_TRUE(BkgDgm5TileReader::readAsciiGrid(stream, tile, &error));
+    CHECK_TRUE(GermanyDgm5TileReader::readAsciiGrid(stream, tile, &error));
     CHECK_EQ_INT(tile.columns(), 3);
     CHECK_EQ_INT(tile.rows(), 3);
     CHECK_NEAR(tile.cellSize(), 5.0, 1e-12);
@@ -118,7 +118,7 @@ void testAsciiGridWithCenterReference()
                               "1 2\n"
                               "3 4\n");
     Utm32GridTile tile;
-    CHECK_TRUE(BkgDgm5TileReader::readAsciiGrid(stream, tile));
+    CHECK_TRUE(GermanyDgm5TileReader::readAsciiGrid(stream, tile));
     CHECK_NEAR(tile.originEasting(), 690000.0, 1e-9);
     CHECK_NEAR(tile.originNorthing(), 5334000.0, 1e-9);
 
@@ -136,7 +136,7 @@ void testFileExtensionDispatch()
     }
     Utm32GridTile tile;
     std::string error;
-    CHECK_TRUE(BkgDgm5TileReader::readFile(xyzPath, tile, &error));
+    CHECK_TRUE(GermanyDgm5TileReader::readFile(xyzPath, tile, &error));
     CHECK_NEAR(tile.cellSize(), 5.0, 1e-12);
     std::remove(xyzPath.c_str());
 
@@ -147,7 +147,7 @@ void testFileExtensionDispatch()
             << "7 7\n7 7\n";
     }
     Utm32GridTile ascTile;
-    CHECK_TRUE(BkgDgm5TileReader::readFile(ascPath, ascTile, &error));
+    CHECK_TRUE(GermanyDgm5TileReader::readFile(ascPath, ascTile, &error));
     double height = 0.0;
     CHECK_TRUE(ascTile.sampleUtm(690002.5, 5334002.5, height));
     CHECK_NEAR(height, 7.0, 1e-12);
@@ -160,27 +160,27 @@ void testMalformedInput()
     std::string error;
 
     std::istringstream empty("# nothing here\n");
-    CHECK_FALSE(BkgDgm5TileReader::readXyz(empty, tile, &error));
+    CHECK_FALSE(GermanyDgm5TileReader::readXyz(empty, tile, &error));
     CHECK_FALSE(error.empty());
 
     error.clear();
     std::istringstream single("690000 5334000 1\n");
-    CHECK_FALSE(BkgDgm5TileReader::readXyz(single, tile, &error));
+    CHECK_FALSE(GermanyDgm5TileReader::readXyz(single, tile, &error));
     CHECK_FALSE(error.empty());
 
     error.clear();
     std::istringstream incomplete("ncols 3\nnrows 3\n");
-    CHECK_FALSE(BkgDgm5TileReader::readAsciiGrid(incomplete, tile, &error));
+    CHECK_FALSE(GermanyDgm5TileReader::readAsciiGrid(incomplete, tile, &error));
     CHECK_FALSE(error.empty());
 
     error.clear();
     std::istringstream truncated(
         "ncols 3\nnrows 3\nxllcorner 690000\nyllcorner 5334000\ncellsize 5\n1 2\n");
-    CHECK_FALSE(BkgDgm5TileReader::readAsciiGrid(truncated, tile, &error));
+    CHECK_FALSE(GermanyDgm5TileReader::readAsciiGrid(truncated, tile, &error));
     CHECK_FALSE(error.empty());
 
     error.clear();
-    CHECK_FALSE(BkgDgm5TileReader::readFile("does_not_exist.xyz", tile, &error));
+    CHECK_FALSE(GermanyDgm5TileReader::readFile("does_not_exist.xyz", tile, &error));
     CHECK_FALSE(error.empty());
 }
 
@@ -194,5 +194,5 @@ int main()
     testAsciiGridWithCenterReference();
     testFileExtensionDispatch();
     testMalformedInput();
-    return geotest::summarize("BkgDgm5TileReaderTests");
+    return geotest::summarize("GermanyDgm5TileReaderTests");
 }

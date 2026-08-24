@@ -1,4 +1,4 @@
-#include "geolib/data_sources/BkgDgm5HeightDataSource.h"
+#include "geolib/data_sources/GermanyDgm5HeightDataSource.h"
 
 #include "geolib/UtmProjection.h"
 #include "TestSupport.h"
@@ -10,7 +10,7 @@ using namespace geo;
 
 namespace {
 
-using TileKey = BkgDgm5HeightDataSource::TileKey;
+using TileKey = GermanyDgm5HeightDataSource::TileKey;
 
 /// Tile of constant height covering the whole 1 km square at 5 m spacing.
 std::shared_ptr<Utm32GridTile> makeTile(const TileKey& key, double height)
@@ -30,13 +30,13 @@ void testTileKeyToString()
 void testTileKeyFor()
 {
     // Munich, Marienplatz -> UTM32 691611 / 5334758.
-    const auto key = BkgDgm5HeightDataSource::tileKeyFor(48.1372, 11.5756);
+    const auto key = GermanyDgm5HeightDataSource::tileKeyFor(48.1372, 11.5756);
     CHECK_EQ_INT(key.eastKm, 691);
     CHECK_EQ_INT(key.northKm, 5334);
 
     double easting = 0.0;
     double northing = 0.0;
-    BkgDgm5HeightDataSource::toUtm32(48.1372, 11.5756, easting, northing);
+    GermanyDgm5HeightDataSource::toUtm32(48.1372, 11.5756, easting, northing);
     CHECK_NEAR(easting, 691611.22, 0.02);
     CHECK_NEAR(northing, 5334758.05, 0.02);
 }
@@ -44,7 +44,7 @@ void testTileKeyFor()
 /// The DGM5 covers all of Germany, not just a single state.
 void testCoverage()
 {
-    const BkgDgm5HeightDataSource source({});
+    const GermanyDgm5HeightDataSource source({});
     CHECK_TRUE(source.covers(48.1372, 11.5756)); // Munich
     CHECK_TRUE(source.covers(53.5511, 9.9937));  // Hamburg
     CHECK_TRUE(source.covers(51.0504, 13.7373)); // Dresden
@@ -56,7 +56,7 @@ void testCoverage()
 
 void testSamplingUsesTheMatchingTile()
 {
-    BkgDgm5HeightDataSource source([](const TileKey& key) {
+    GermanyDgm5HeightDataSource source([](const TileKey& key) {
         return makeTile(key, key.eastKm == 691 && key.northKm == 5334 ? 519.0 : 100.0);
     });
 
@@ -69,7 +69,7 @@ void testSamplingUsesTheMatchingTile()
 void testTilesAreCached()
 {
     int loads = 0;
-    BkgDgm5HeightDataSource source([&](const TileKey& key) {
+    GermanyDgm5HeightDataSource source([&](const TileKey& key) {
         ++loads;
         return makeTile(key, 300.0);
     });
@@ -80,7 +80,7 @@ void testTilesAreCached()
     CHECK_EQ_INT(loads, 1);
 
     int missing = 0;
-    BkgDgm5HeightDataSource gaps([&](const TileKey&) {
+    GermanyDgm5HeightDataSource gaps([&](const TileKey&) {
         ++missing;
         return nullptr;
     });
@@ -91,21 +91,21 @@ void testTilesAreCached()
 
 void testOutsideCoverageFails()
 {
-    BkgDgm5HeightDataSource source([](const TileKey& key) { return makeTile(key, 10.0); });
+    GermanyDgm5HeightDataSource source([](const TileKey& key) { return makeTile(key, 10.0); });
     double height = 0.0;
     CHECK_FALSE(source.sampleHeight(51.5074, -0.1278, height));
 }
 
 void testMissingTileFails()
 {
-    BkgDgm5HeightDataSource source([](const TileKey&) { return nullptr; });
+    GermanyDgm5HeightDataSource source([](const TileKey&) { return nullptr; });
     double height = 123.0;
     CHECK_FALSE(source.sampleHeight(48.1372, 11.5756, height));
 }
 
 void testWithoutLoader()
 {
-    const BkgDgm5HeightDataSource source({});
+    const GermanyDgm5HeightDataSource source({});
     double height = 0.0;
     CHECK_FALSE(source.sampleHeight(48.1372, 11.5756, height));
 }
@@ -115,7 +115,7 @@ void testWithoutLoader()
 void testBorderFallsBackToNeighbour()
 {
     const TileKey border{691, 5334};
-    BkgDgm5HeightDataSource source([&](const TileKey& key) {
+    GermanyDgm5HeightDataSource source([&](const TileKey& key) {
         if (key.eastKm == border.eastKm && key.northKm == border.northKm) {
             return std::shared_ptr<Utm32GridTile>();
         }
@@ -149,5 +149,5 @@ int main()
     testMissingTileFails();
     testWithoutLoader();
     testBorderFallsBackToNeighbour();
-    return geotest::summarize("BkgDgm5HeightDataSourceTests");
+    return geotest::summarize("GermanyDgm5HeightDataSourceTests");
 }

@@ -15,13 +15,13 @@ add_library(geolib
     src/data_sources/BavariaDgm1HeightDataSource.cpp
     src/data_sources/BavariaDgm1TileDownloader.cpp
     src/data_sources/BavariaDgm1TileReader.cpp
-    src/data_sources/BkgDgm5HeightDataSource.cpp
-    src/data_sources/BkgDgm5TileDownloader.cpp
-    src/data_sources/BkgDgm5TileReader.cpp
     src/data_sources/BngGridTile.cpp
     src/data_sources/CopernicusDem30HeightDataSource.cpp
     src/data_sources/CopernicusDem30TileDownloader.cpp
     src/data_sources/CopernicusDem30TileReader.cpp
+    src/data_sources/GermanyDgm5HeightDataSource.cpp
+    src/data_sources/GermanyDgm5TileDownloader.cpp
+    src/data_sources/GermanyDgm5TileReader.cpp
     src/data_sources/UkEaLidarHeightDataSource.cpp
     src/data_sources/UkEaLidarTileDownloader.cpp
     src/data_sources/UkEaLidarTileReader.cpp

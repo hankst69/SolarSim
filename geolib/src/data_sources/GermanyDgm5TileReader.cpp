@@ -1,4 +1,4 @@
-#include "geolib/data_sources/BkgDgm5TileReader.h"
+#include "geolib/data_sources/GermanyDgm5TileReader.h"
 
 #include <algorithm>
 #include <cctype>
@@ -68,7 +68,7 @@ double deriveSpacing(std::vector<double> values)
 
 } // namespace
 
-bool BkgDgm5TileReader::readXyz(std::istream& stream, Utm32GridTile& tile, std::string* error)
+bool GermanyDgm5TileReader::readXyz(std::istream& stream, Utm32GridTile& tile, std::string* error)
 {
     std::vector<double> eastings;
     std::vector<double> northings;
@@ -135,7 +135,8 @@ bool BkgDgm5TileReader::readXyz(std::istream& stream, Utm32GridTile& tile, std::
     return true;
 }
 
-bool BkgDgm5TileReader::readAsciiGrid(std::istream& stream, Utm32GridTile& tile, std::string* error)
+bool GermanyDgm5TileReader::readAsciiGrid(std::istream& stream, Utm32GridTile& tile,
+                                          std::string* error)
 {
     int columns = 0;
     int rows = 0;
@@ -213,7 +214,8 @@ bool BkgDgm5TileReader::readAsciiGrid(std::istream& stream, Utm32GridTile& tile,
     return true;
 }
 
-bool BkgDgm5TileReader::readFile(const std::string& path, Utm32GridTile& tile, std::string* error)
+bool GermanyDgm5TileReader::readFile(const std::string& path, Utm32GridTile& tile,
+                                     std::string* error)
 {
     std::ifstream stream(path);
     if (!stream) {

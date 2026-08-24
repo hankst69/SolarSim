@@ -1,6 +1,6 @@
 #pragma once
 
-#include "geolib/data_sources/BkgDgm5HeightDataSource.h"
+#include "geolib/data_sources/GermanyDgm5HeightDataSource.h"
 #include "geolib/data_sources/Utm32GridTile.h"
 
 #include <functional>
@@ -18,9 +18,9 @@ namespace geo {
 ///
 /// Tiles are named after the south west corner of their 1 km square in UTM32,
 /// e.g. `690_5334` -> `dgm5_32_690_5334_2.xyz`.
-class BkgDgm5TileDownloader {
+class GermanyDgm5TileDownloader {
 public:
-    using TileKey = BkgDgm5HeightDataSource::TileKey;
+    using TileKey = GermanyDgm5HeightDataSource::TileKey;
 
     /// Downloads `url` into the local file `targetPath`. Returns false if the
     /// tile could not be retrieved (404, no network, ...).
@@ -38,7 +38,7 @@ public:
         bool allowDownload{true};
     };
 
-    explicit BkgDgm5TileDownloader(Config config = {}, FetchFunction fetch = {});
+    explicit GermanyDgm5TileDownloader(Config config = {}, FetchFunction fetch = {});
 
     const Config& config() const { return m_config; }
 
@@ -59,10 +59,10 @@ public:
     /// Loads and parses a tile. Returns false if unavailable.
     bool loadTile(const TileKey& key, Utm32GridTile& tile, std::string* error = nullptr) const;
 
-    /// Tile loader callback that can be handed to BkgDgm5HeightDataSource.
+    /// Tile loader callback that can be handed to GermanyDgm5HeightDataSource.
     /// The returned loader keeps a reference to this downloader, which must
     /// therefore outlive the data source.
-    BkgDgm5HeightDataSource::TileLoader tileLoader() const;
+    GermanyDgm5HeightDataSource::TileLoader tileLoader() const;
 
 private:
     Config m_config;

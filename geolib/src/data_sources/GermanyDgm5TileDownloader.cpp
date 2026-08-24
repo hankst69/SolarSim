@@ -1,6 +1,6 @@
-#include "geolib/data_sources/BkgDgm5TileDownloader.h"
+#include "geolib/data_sources/GermanyDgm5TileDownloader.h"
 
-#include "geolib/data_sources/BkgDgm5TileReader.h"
+#include "geolib/data_sources/GermanyDgm5TileReader.h"
 
 #include <fstream>
 #include <memory>
@@ -56,18 +56,18 @@ std::string joinPath(const std::string& directory, const std::string& fileName)
 
 } // namespace
 
-BkgDgm5TileDownloader::BkgDgm5TileDownloader(Config config, FetchFunction fetch)
+GermanyDgm5TileDownloader::GermanyDgm5TileDownloader(Config config, FetchFunction fetch)
     : m_config(std::move(config)), m_fetch(std::move(fetch))
 {
 }
 
-std::string BkgDgm5TileDownloader::fileNameFor(const TileKey& key) const
+std::string GermanyDgm5TileDownloader::fileNameFor(const TileKey& key) const
 {
     return "dgm5_32_" + std::to_string(key.eastKm) + "_" + std::to_string(key.northKm) + "_2" +
            m_config.fileExtension;
 }
 
-std::string BkgDgm5TileDownloader::urlFor(const TileKey& key) const
+std::string GermanyDgm5TileDownloader::urlFor(const TileKey& key) const
 {
     std::string base = m_config.baseUrl;
     if (!base.empty() && base.back() == '/') {
@@ -76,12 +76,12 @@ std::string BkgDgm5TileDownloader::urlFor(const TileKey& key) const
     return base + "/" + fileNameFor(key);
 }
 
-std::string BkgDgm5TileDownloader::cachePathFor(const TileKey& key) const
+std::string GermanyDgm5TileDownloader::cachePathFor(const TileKey& key) const
 {
     return joinPath(m_config.cacheDirectory, fileNameFor(key));
 }
 
-bool BkgDgm5TileDownloader::ensureLocalFile(const TileKey& key, std::string& localPath,
+bool GermanyDgm5TileDownloader::ensureLocalFile(const TileKey& key, std::string& localPath,
                                             std::string* error) const
 {
     localPath = cachePathFor(key);
@@ -105,17 +105,17 @@ bool BkgDgm5TileDownloader::ensureLocalFile(const TileKey& key, std::string& loc
     return true;
 }
 
-bool BkgDgm5TileDownloader::loadTile(const TileKey& key, Utm32GridTile& tile,
+bool GermanyDgm5TileDownloader::loadTile(const TileKey& key, Utm32GridTile& tile,
                                      std::string* error) const
 {
     std::string localPath;
     if (!ensureLocalFile(key, localPath, error)) {
         return false;
     }
-    return BkgDgm5TileReader::readFile(localPath, tile, error);
+    return GermanyDgm5TileReader::readFile(localPath, tile, error);
 }
 
-BkgDgm5HeightDataSource::TileLoader BkgDgm5TileDownloader::tileLoader() const
+GermanyDgm5HeightDataSource::TileLoader GermanyDgm5TileDownloader::tileLoader() const
 {
     return [this](const TileKey& key) -> std::shared_ptr<Utm32GridTile> {
         auto tile = std::make_shared<Utm32GridTile>();

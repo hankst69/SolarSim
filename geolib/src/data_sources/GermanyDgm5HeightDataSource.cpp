@@ -1,4 +1,4 @@
-#include "geolib/data_sources/BkgDgm5HeightDataSource.h"
+#include "geolib/data_sources/GermanyDgm5HeightDataSource.h"
 
 #include "geolib/UtmProjection.h"
 
@@ -16,22 +16,23 @@ constexpr double kTileSizeM = 1000.0;
 
 } // namespace
 
-std::string BkgDgm5HeightDataSource::TileKey::toString() const
+std::string GermanyDgm5HeightDataSource::TileKey::toString() const
 {
     return std::to_string(eastKm) + "_" + std::to_string(northKm);
 }
 
-BkgDgm5HeightDataSource::BkgDgm5HeightDataSource(TileLoader loader) : m_loader(std::move(loader))
+GermanyDgm5HeightDataSource::GermanyDgm5HeightDataSource(TileLoader loader)
+    : m_loader(std::move(loader))
 {
 }
 
-void BkgDgm5HeightDataSource::toUtm32(double latitudeDeg, double longitudeDeg, double& eastingM,
+void GermanyDgm5HeightDataSource::toUtm32(double latitudeDeg, double longitudeDeg, double& eastingM,
                                       double& northingM)
 {
     Utm32Projection::forward(latitudeDeg, longitudeDeg, eastingM, northingM);
 }
 
-BkgDgm5HeightDataSource::TileKey BkgDgm5HeightDataSource::tileKeyFor(double latitudeDeg,
+GermanyDgm5HeightDataSource::TileKey GermanyDgm5HeightDataSource::tileKeyFor(double latitudeDeg,
                                                                     double longitudeDeg)
 {
     double easting = 0.0;
@@ -43,7 +44,7 @@ BkgDgm5HeightDataSource::TileKey BkgDgm5HeightDataSource::tileKeyFor(double lati
     return key;
 }
 
-std::shared_ptr<Utm32GridTile> BkgDgm5HeightDataSource::tile(const TileKey& key) const
+std::shared_ptr<Utm32GridTile> GermanyDgm5HeightDataSource::tile(const TileKey& key) const
 {
     const auto it = m_tiles.find(key);
     if (it != m_tiles.end()) {
@@ -57,7 +58,7 @@ std::shared_ptr<Utm32GridTile> BkgDgm5HeightDataSource::tile(const TileKey& key)
     return loaded;
 }
 
-bool BkgDgm5HeightDataSource::sampleHeight(double latitudeDeg, double longitudeDeg,
+bool GermanyDgm5HeightDataSource::sampleHeight(double latitudeDeg, double longitudeDeg,
                                            double& heightM) const
 {
     if (!covers(latitudeDeg, longitudeDeg)) {
