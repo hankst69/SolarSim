@@ -55,3 +55,10 @@ add_geolib_test(UkEaLidarHeightDataSourceTests
     geolib/data_sources/UkEaLidarHeightDataSourceTests.cpp)
 add_geolib_test(UkEaLidarTileDownloaderTests
     geolib/data_sources/UkEaLidarTileDownloaderTests.cpp)
+add_geolib_test(UtmGridTileTests geolib/data_sources/UtmGridTileTests.cpp)
+add_geolib_test(UsaUsgs3Dep1mTileReaderTests
+    geolib/data_sources/UsaUsgs3Dep1mTileReaderTests.cpp)
+add_geolib_test(UsaUsgs3Dep1mHeightDataSourceTests
+    geolib/data_sources/UsaUsgs3Dep1mHeightDataSourceTests.cpp)
+add_geolib_test(UsaUsgs3Dep1mTileDownloaderTests
+    geolib/data_sources/UsaUsgs3Dep1mTileDownloaderTests.cpp)

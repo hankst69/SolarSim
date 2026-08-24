@@ -25,7 +25,11 @@ add_library(geolib
     src/data_sources/UkEaLidarHeightDataSource.cpp
     src/data_sources/UkEaLidarTileDownloader.cpp
     src/data_sources/UkEaLidarTileReader.cpp
+    src/data_sources/UsaUsgs3Dep1mHeightDataSource.cpp
+    src/data_sources/UsaUsgs3Dep1mTileDownloader.cpp
+    src/data_sources/UsaUsgs3Dep1mTileReader.cpp
     src/data_sources/Utm32GridTile.cpp
+    src/data_sources/UtmGridTile.cpp
 )
 
 target_include_directories(geolib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

@@ -60,6 +60,10 @@ covers:
 | `tests/geolib/data_sources/UkEaLidarTileReaderTests.cpp` | `UkEaLidarTileReader` |
 | `tests/geolib/data_sources/UkEaLidarHeightDataSourceTests.cpp` | `UkEaLidarHeightDataSource` |
 | `tests/geolib/data_sources/UkEaLidarTileDownloaderTests.cpp` | `UkEaLidarTileDownloader` |
+| `tests/geolib/data_sources/UtmGridTileTests.cpp` | `UtmGridTile` |
+| `tests/geolib/data_sources/UsaUsgs3Dep1mTileReaderTests.cpp` | `UsaUsgs3Dep1mTileReader` |
+| `tests/geolib/data_sources/UsaUsgs3Dep1mHeightDataSourceTests.cpp` | `UsaUsgs3Dep1mHeightDataSource` |
+| `tests/geolib/data_sources/UsaUsgs3Dep1mTileDownloaderTests.cpp` | `UsaUsgs3Dep1mTileDownloader` |
 
 Each suite is a small standalone executable that prints its failures and
 returns a non zero exit code. `tests/TestSupport.h` provides the `CHECK_*`
@@ -111,8 +115,12 @@ injected loader/fetch callbacks, so nothing ever touches the network.
 | `UkEaLidarHeightDataSource` | `data_sources/UkEaLidarHeightDataSource.h` | Environment Agency LIDAR Composite DTM (1 m) source with BNG tiling. |
 | `UkEaLidarTileReader` | `data_sources/UkEaLidarTileReader.h` | Parser for the EA LIDAR tile files (ESRI ASCII grid and XYZ). |
 | `UkEaLidarTileDownloader` | `data_sources/UkEaLidarTileDownloader.h` | Tile naming, local cache and download of EA LIDAR tiles. |
+| `UsaUsgs3Dep1mHeightDataSource` | `data_sources/UsaUsgs3Dep1mHeightDataSource.h` | USGS 3DEP 1 m DEM source with 10 km tiling in the local UTM zone. |
+| `UsaUsgs3Dep1mTileReader` | `data_sources/UsaUsgs3Dep1mTileReader.h` | Parser for the 3DEP 1 m tile files (ESRI ASCII grid and XYZ). |
+| `UsaUsgs3Dep1mTileDownloader` | `data_sources/UsaUsgs3Dep1mTileDownloader.h` | Tile naming, local cache and download of 3DEP 1 m tiles. |
 | `BngGridTile` | `data_sources/BngGridTile.h` | Elevation raster tile in its native British National Grid. |
 | `Utm32GridTile` | `data_sources/Utm32GridTile.h` | Elevation raster tile in its native UTM32 grid. |
+| `UtmGridTile` | `data_sources/UtmGridTile.h` | Elevation raster tile in its native UTM grid, zone stored per tile. |
 
 ### Earth model
 
@@ -458,6 +466,51 @@ results, and tile borders fall back to the neighbouring tiles. Note that the
 composite does not cover the whole bounding box of England and Wales; locations
 without data are reported as unavailable so the registry can fall back to a
 coarser source such as GLO-30.
+
+#### USA: USGS 3DEP 1 m
+
+The US "3D Elevation Program" 1 meter DEM of the USGS (public domain, published
+via The National Map) follows the same pattern, but on the UTM grid of the
+project area. Because the conterminous US spans the zones 10 to 19, the zone is
+part of the tile and of the tile key:
+
+- `UtmGridTile` - one elevation raster tile kept in its **native** UTM grid,
+  including the zone it belongs to. Geodetic queries are projected with
+  `UtmProjection` of that zone before the bilinear interpolation, so the 1 m
+  raster is never resampled. Row 0 is the southernmost row.
+- `UsaUsgs3Dep1mTileReader` - parses the tile files: ESRI `ASC` ASCII grids
+  (`ncols`/`nrows`/`xllcorner`/`yllcorner`/`cellsize`/`NODATA_value`, with
+  `xllcenter`/`yllcenter` accepted as well) and plain `XYZ` triples as produced
+  by the common GeoTIFF conversion tools. Neither format carries the UTM zone,
+  so it is supplied by the caller. ASCII grids store the northernmost row
+  first, so the reader flips them to the south-up ordering of `UtmGridTile`.
+- `UsaUsgs3Dep1mTileDownloader` - builds the official tile file name from the
+  zone and the 10 km block (`USGS_1M_16_x54y4400.asc`), resolves it against a
+  base URL and a local cache directory and hands the parsed result to the data
+  source via `tileLoader()`. The HTTP GET is again an injected `FetchFunction`.
+
+```cpp
+#include "geolib/data_sources/UsaUsgs3Dep1mTileDownloader.h"
+
+UsaUsgs3Dep1mTileDownloader::Config config;
+config.cacheDirectory = "C:/data/usgs_3dep";
+
+static UsaUsgs3Dep1mTileDownloader downloader(config,
+    [](const std::string& url, const std::string& target) {
+        return myHttpGet(url, target);
+    });
+
+auto dep3 = std::make_shared<UsaUsgs3Dep1mHeightDataSource>(downloader.tileLoader());
+HeightDataSourceRegistry::instance().addSource(dep3);
+```
+
+`UsaUsgs3Dep1mHeightDataSource` determines the UTM zone of the query
+(`toUtm()`), snaps the projected position to the containing 10 km block
+(`tileKeyFor()`) and asks the `TileLoader` for the tile. Loaded tiles are cached
+including negative results, and tile borders fall back to the neighbouring tiles
+of the same zone. 3DEP 1 m coverage is not complete; locations without data are
+reported as unavailable so the registry can fall back to a coarser source such
+as GLO-30.
 
 #### Other data sets
 
