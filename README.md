@@ -50,6 +50,9 @@ covers:
 | `tests/geolib/data_sources/BavariaDgm1TileReaderTests.cpp` | `BavariaDgm1TileReader` |
 | `tests/geolib/data_sources/BavariaDgm1HeightDataSourceTests.cpp` | `BavariaDgm1HeightDataSource` |
 | `tests/geolib/data_sources/BavariaDgm1TileDownloaderTests.cpp` | `BavariaDgm1TileDownloader` |
+| `tests/geolib/data_sources/BkgDgm5TileReaderTests.cpp` | `BkgDgm5TileReader` |
+| `tests/geolib/data_sources/BkgDgm5HeightDataSourceTests.cpp` | `BkgDgm5HeightDataSource` |
+| `tests/geolib/data_sources/BkgDgm5TileDownloaderTests.cpp` | `BkgDgm5TileDownloader` |
 | `tests/geolib/data_sources/CopernicusDem30TileReaderTests.cpp` | `CopernicusDem30TileReader` |
 | `tests/geolib/data_sources/CopernicusDem30HeightDataSourceTests.cpp` | `CopernicusDem30HeightDataSource` |
 | `tests/geolib/data_sources/CopernicusDem30TileDownloaderTests.cpp` | `CopernicusDem30TileDownloader` |
@@ -99,6 +102,9 @@ injected loader/fetch callbacks, so nothing ever touches the network.
 | `BavariaDgm1HeightDataSource` | `data_sources/BavariaDgm1HeightDataSource.h` | Bavarian open data DGM1 (1 m) source with UTM32 tiling. |
 | `BavariaDgm1TileReader` | `data_sources/BavariaDgm1TileReader.h` | Parser for the DGM1 tile files (XYZ and ESRI ASCII grid). |
 | `BavariaDgm1TileDownloader` | `data_sources/BavariaDgm1TileDownloader.h` | Tile naming, local cache and download of DGM1 tiles. |
+| `BkgDgm5HeightDataSource` | `data_sources/BkgDgm5HeightDataSource.h` | Nation wide German BKG DGM5 (5 m) source with UTM32 tiling. |
+| `BkgDgm5TileReader` | `data_sources/BkgDgm5TileReader.h` | Parser for the DGM5 tile files (XYZ incl. decimal comma, and ESRI ASCII grid). |
+| `BkgDgm5TileDownloader` | `data_sources/BkgDgm5TileDownloader.h` | Tile naming, local cache and download of DGM5 tiles. |
 | `CopernicusDem30HeightDataSource` | `data_sources/CopernicusDem30HeightDataSource.h` | Global Copernicus DEM GLO-30 (30 m) source with 1 deg tiling. |
 | `CopernicusDem30TileReader` | `data_sources/CopernicusDem30TileReader.h` | Parser for the GLO-30 tile files (HGT and ESRI ASCII grid). |
 | `CopernicusDem30TileDownloader` | `data_sources/CopernicusDem30TileDownloader.h` | Tile naming, local cache and download of GLO-30 tiles. |
@@ -328,6 +334,46 @@ tiles are consulted before the sample is reported as unavailable.
 
 The downloader owns the tile loader it returns, so it has to outlive the data
 source (hence the `static` in the example above).
+
+#### Germany: BKG DGM5
+
+The DGM1 only covers Bavaria, so the nation wide "Digitales Geländemodell
+Gitterweite 5 m (DGM5)" of the Bundesamt für Kartographie und Geodäsie (BKG,
+dl-de/by-2-0) fills the gaps for the rest of Germany. It uses the same UTM32
+tiling as the DGM1 and therefore reuses `Utm32GridTile`; only the grid spacing
+differs (5 m instead of 1 m):
+
+- `BkgDgm5TileReader` - parses the official `XYZ` delivery format and ESRI
+  `ASC` ASCII grids. In addition to the DGM1 reader it normalises German number
+  formatting: a comma is treated as a decimal comma when the line already
+  consists of three tokens and as a column separator otherwise.
+- `BkgDgm5TileDownloader` - builds the tile file name (`dgm5_32_690_5334_2.xyz`)
+  from the 1 km square, resolves it against a base URL and a local cache
+  directory and hands the parsed result to the data source via `tileLoader()`.
+  As for all sources the HTTP GET is an injected `FetchFunction`.
+- `BkgDgm5HeightDataSource` - projects the query to UTM32, derives the tile key
+  of the containing 1 km square and caches loaded tiles including negative
+  results. The border fallback uses the 5 m grid spacing as the width of the
+  strip in which the interpolation stencil reaches into the neighbour.
+
+```cpp
+#include "geolib/data_sources/BkgDgm5TileDownloader.h"
+
+BkgDgm5TileDownloader::Config config;
+config.cacheDirectory = "C:/data/dgm5";
+
+static BkgDgm5TileDownloader downloader(config,
+    [](const std::string& url, const std::string& target) {
+        return myHttpGet(url, target);
+    });
+
+auto dgm5 = std::make_shared<BkgDgm5HeightDataSource>(downloader.tileLoader());
+HeightDataSourceRegistry::instance().addSource(dgm5);
+```
+
+Because the registry ranks by resolution, registering both German sources gives
+the 1 m DGM1 inside Bavaria and the 5 m DGM5 everywhere else in Germany
+automatically.
 
 #### World: Copernicus DEM GLO-30
 

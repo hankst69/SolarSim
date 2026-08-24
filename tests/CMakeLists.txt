@@ -38,6 +38,11 @@ add_geolib_test(BavariaDgm1HeightDataSourceTests
     geolib/data_sources/BavariaDgm1HeightDataSourceTests.cpp)
 add_geolib_test(BavariaDgm1TileDownloaderTests
     geolib/data_sources/BavariaDgm1TileDownloaderTests.cpp)
+add_geolib_test(BkgDgm5TileReaderTests geolib/data_sources/BkgDgm5TileReaderTests.cpp)
+add_geolib_test(BkgDgm5HeightDataSourceTests
+    geolib/data_sources/BkgDgm5HeightDataSourceTests.cpp)
+add_geolib_test(BkgDgm5TileDownloaderTests
+    geolib/data_sources/BkgDgm5TileDownloaderTests.cpp)
 add_geolib_test(CopernicusDem30TileReaderTests
     geolib/data_sources/CopernicusDem30TileReaderTests.cpp)
 add_geolib_test(CopernicusDem30HeightDataSourceTests
