@@ -1,4 +1,4 @@
-#include "geolib/BavariaDgm1HeightDataSource.h"
+#include "geolib/data_sources/BavariaDgm1HeightDataSource.h"
 
 #include <cmath>
 #include <string>

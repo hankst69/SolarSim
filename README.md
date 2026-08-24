@@ -43,7 +43,7 @@ cmake --build build
 | `FlatHeightDataSource` | `GridHeightDataSource.h` | World wide fallback source returning a constant height. |
 | `GridHeightDataSource` | `GridHeightDataSource.h` | Height source backed by an in-memory latitude/longitude raster. |
 | `HeightDataSourceRegistry` | `HeightDataSourceRegistry.h` | Registry of data sources with location based source selection. |
-| `BavariaDgm1HeightDataSource` | `BavariaDgm1HeightDataSource.h` | Bavarian open data DGM1 (1 m) source with UTM32 tiling. |
+| `BavariaDgm1HeightDataSource` | `data_sources/BavariaDgm1HeightDataSource.h` | Bavarian open data DGM1 (1 m) source with UTM32 tiling. |
 
 ### Earth model
 
@@ -157,6 +157,8 @@ one or `nullptr`. The registry returned by `instance()` is pre-filled with the
 flat fallback source; applications add their own sources on top:
 
 ```cpp
+#include "geolib/data_sources/BavariaDgm1HeightDataSource.h"
+
 auto& registry = HeightDataSourceRegistry::instance();
 registry.addSource(std::make_shared<BavariaDgm1HeightDataSource>(myTileLoader));
 
@@ -164,6 +166,11 @@ HeightDataSourcePtr source = registry.selectSource(home);
 ```
 
 #### Bavaria DGM1
+
+Concrete data set implementations live in their own subdirectory,
+`geolib/include/geolib/data_sources` and `geolib/src/data_sources`, so that the
+generic height data interfaces stay separated from the region specific
+adapters.
 
 `BavariaDgm1HeightDataSource` wraps the open data set "openData Digitales
 Geländemodell 1m (DGM1)" of the Landesamt für Digitalisierung, Breitband und
