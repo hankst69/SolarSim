@@ -49,6 +49,9 @@ covers:
 | `tests/geolib/data_sources/BavariaDgm1TileReaderTests.cpp` | `BavariaDgm1TileReader` |
 | `tests/geolib/data_sources/BavariaDgm1HeightDataSourceTests.cpp` | `BavariaDgm1HeightDataSource` |
 | `tests/geolib/data_sources/BavariaDgm1TileDownloaderTests.cpp` | `BavariaDgm1TileDownloader` |
+| `tests/geolib/data_sources/CopernicusDem30TileReaderTests.cpp` | `CopernicusDem30TileReader` |
+| `tests/geolib/data_sources/CopernicusDem30HeightDataSourceTests.cpp` | `CopernicusDem30HeightDataSource` |
+| `tests/geolib/data_sources/CopernicusDem30TileDownloaderTests.cpp` | `CopernicusDem30TileDownloader` |
 
 Each suite is a small standalone executable that prints its failures and
 returns a non zero exit code. `tests/TestSupport.h` provides the `CHECK_*`
@@ -90,6 +93,9 @@ injected loader/fetch callbacks, so nothing ever touches the network.
 | `BavariaDgm1HeightDataSource` | `data_sources/BavariaDgm1HeightDataSource.h` | Bavarian open data DGM1 (1 m) source with UTM32 tiling. |
 | `BavariaDgm1TileReader` | `data_sources/BavariaDgm1TileReader.h` | Parser for the DGM1 tile files (XYZ and ESRI ASCII grid). |
 | `BavariaDgm1TileDownloader` | `data_sources/BavariaDgm1TileDownloader.h` | Tile naming, local cache and download of DGM1 tiles. |
+| `CopernicusDem30HeightDataSource` | `data_sources/CopernicusDem30HeightDataSource.h` | Global Copernicus DEM GLO-30 (30 m) source with 1 deg tiling. |
+| `CopernicusDem30TileReader` | `data_sources/CopernicusDem30TileReader.h` | Parser for the GLO-30 tile files (HGT and ESRI ASCII grid). |
+| `CopernicusDem30TileDownloader` | `data_sources/CopernicusDem30TileDownloader.h` | Tile naming, local cache and download of GLO-30 tiles. |
 | `Utm32GridTile` | `data_sources/Utm32GridTile.h` | Elevation raster tile in its native UTM32 grid. |
 
 ### Earth model
@@ -294,6 +300,46 @@ tiles are consulted before the sample is reported as unavailable.
 The downloader owns the tile loader it returns, so it has to outlive the data
 source (hence the `static` in the example above).
 
+#### World: Copernicus DEM GLO-30
+
+The global counterpart follows exactly the same three class pattern, but works
+on the geographic 1 deg x 1 deg tiles of the Copernicus DEM GLO-30 data set
+(ESA/Airbus, ~30 m ground sample distance):
+
+- `CopernicusDem30TileReader` - parses a tile into a `GridHeightDataSource`.
+  Two formats are supported: the plain `HGT` raster many GLO-30 mirrors provide
+  (big endian signed 16 bit samples, northernmost row first, square, without
+  any georeference, so the bounds are supplied by the caller) and ESRI `ASC`
+  ASCII grids in degrees. Both formats already store the northernmost row
+  first, which matches the row order of `GridHeightDataSource`.
+- `CopernicusDem30TileDownloader` - builds the official tile name
+  (`Copernicus_DSM_COG_10_N48_00_E011_00_DEM`), resolves it against a base URL
+  and a local cache directory and hands the parsed tile to the data source via
+  `tileLoader()`. As above the HTTP GET is an injected `FetchFunction`.
+- `CopernicusDem30HeightDataSource` - derives the tile key of the containing
+  degree square (`tileKeyFor()`), caches loaded tiles including negative
+  results (tiles simply do not exist over open water) and falls back to the
+  neighbouring tiles for samples exactly on a tile border.
+
+```cpp
+#include "geolib/data_sources/CopernicusDem30TileDownloader.h"
+
+CopernicusDem30TileDownloader::Config config;
+config.cacheDirectory = "C:/data/glo30";
+
+static CopernicusDem30TileDownloader downloader(config,
+    [](const std::string& url, const std::string& target) {
+        return myHttpGet(url, target);
+    });
+
+auto glo30 = std::make_shared<CopernicusDem30HeightDataSource>(downloader.tileLoader());
+HeightDataSourceRegistry::instance().addSource(glo30);
+```
+
+Its coverage is the whole world at a 30 m resolution, so the registry prefers
+the finer regional sources (such as DGM1) wherever they are available and uses
+GLO-30 as the global fallback.
+
 #### Other data sets
 
 The same pattern can be used for other regions. Suggested open data sets:
@@ -357,10 +403,10 @@ structure before computing dense shadow maps over a full day.
 
 using namespace geo;
 
-GeoLocation home(48.1372, 11.5756);        // Munich
-HorizonDome dome(home);                     // eye height 1.6 m
+GeoLocation home(49.56255, 11.14493);  // Bavaria, Germany
+HorizonDome dome(home);                // eye height 1.6 m
 
-SunPath path(dome, 2024, 6, 21);
+SunPath path(dome, 2026, 8, 23);
 std::vector<Vector3> arc = path.arcPoints();
 
 DateTimeUtc rise;
