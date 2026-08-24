@@ -24,6 +24,7 @@ add_geolib_test(GeoLocationTests geolib/GeoLocationTests.cpp)
 add_geolib_test(GroundPlaneTests geolib/GroundPlaneTests.cpp)
 add_geolib_test(HorizonDomeTests geolib/HorizonDomeTests.cpp)
 add_geolib_test(UtmProjectionTests geolib/UtmProjectionTests.cpp)
+add_geolib_test(BritishNationalGridProjectionTests geolib/BritishNationalGridProjectionTests.cpp)
 add_geolib_test(SolarPositionTests geolib/SolarPositionTests.cpp)
 add_geolib_test(SunPathTests geolib/SunPathTests.cpp)
 add_geolib_test(TriangleMeshTests geolib/TriangleMeshTests.cpp)
@@ -43,3 +44,9 @@ add_geolib_test(CopernicusDem30HeightDataSourceTests
     geolib/data_sources/CopernicusDem30HeightDataSourceTests.cpp)
 add_geolib_test(CopernicusDem30TileDownloaderTests
     geolib/data_sources/CopernicusDem30TileDownloaderTests.cpp)
+add_geolib_test(BngGridTileTests geolib/data_sources/BngGridTileTests.cpp)
+add_geolib_test(UkEaLidarTileReaderTests geolib/data_sources/UkEaLidarTileReaderTests.cpp)
+add_geolib_test(UkEaLidarHeightDataSourceTests
+    geolib/data_sources/UkEaLidarHeightDataSourceTests.cpp)
+add_geolib_test(UkEaLidarTileDownloaderTests
+    geolib/data_sources/UkEaLidarTileDownloaderTests.cpp)

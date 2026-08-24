@@ -40,6 +40,7 @@ covers:
 | `tests/geolib/GroundPlaneTests.cpp` | `GroundPlane` |
 | `tests/geolib/HorizonDomeTests.cpp` | `HorizonDome` |
 | `tests/geolib/UtmProjectionTests.cpp` | `UtmProjection` / `Utm32Projection` |
+| `tests/geolib/BritishNationalGridProjectionTests.cpp` | `BritishNationalGridProjection` |
 | `tests/geolib/SolarPositionTests.cpp` | `SolarPosition` |
 | `tests/geolib/SunPathTests.cpp` | `SunPath` |
 | `tests/geolib/TriangleMeshTests.cpp` | `TriangleMesh` |
@@ -52,6 +53,10 @@ covers:
 | `tests/geolib/data_sources/CopernicusDem30TileReaderTests.cpp` | `CopernicusDem30TileReader` |
 | `tests/geolib/data_sources/CopernicusDem30HeightDataSourceTests.cpp` | `CopernicusDem30HeightDataSource` |
 | `tests/geolib/data_sources/CopernicusDem30TileDownloaderTests.cpp` | `CopernicusDem30TileDownloader` |
+| `tests/geolib/data_sources/BngGridTileTests.cpp` | `BngGridTile` |
+| `tests/geolib/data_sources/UkEaLidarTileReaderTests.cpp` | `UkEaLidarTileReader` |
+| `tests/geolib/data_sources/UkEaLidarHeightDataSourceTests.cpp` | `UkEaLidarHeightDataSource` |
+| `tests/geolib/data_sources/UkEaLidarTileDownloaderTests.cpp` | `UkEaLidarTileDownloader` |
 
 Each suite is a small standalone executable that prints its failures and
 returns a non zero exit code. `tests/TestSupport.h` provides the `CHECK_*`
@@ -79,6 +84,7 @@ injected loader/fetch callbacks, so nothing ever touches the network.
 | `GroundPlane` | `GroundPlane.h` | Tangential plane on the earth surface at a `GeoLocation`. |
 | `UtmProjection` | `UtmProjection.h` | Forward/inverse UTM (transverse Mercator) projection for any zone. |
 | `Utm32Projection` | `UtmProjection.h` | Convenience accessor for UTM zone 32N (EPSG:25832). |
+| `BritishNationalGridProjection` | `BritishNationalGridProjection.h` | British National Grid (OSGB36, EPSG:27700) incl. datum shift and square codes. |
 | `HorizonDome` | `HorizonDome.h` | Half sphere standing on the ground plane, reaching to the visible horizon. |
 | `DateTimeUtc` | `DateTimeUtc.h` | UTC date/time with Julian day and Julian century conversion. |
 | `SolarPosition` | `SolarPosition.h` | Sun position for a location and UTC time, projected onto the dome. |
@@ -96,6 +102,10 @@ injected loader/fetch callbacks, so nothing ever touches the network.
 | `CopernicusDem30HeightDataSource` | `data_sources/CopernicusDem30HeightDataSource.h` | Global Copernicus DEM GLO-30 (30 m) source with 1 deg tiling. |
 | `CopernicusDem30TileReader` | `data_sources/CopernicusDem30TileReader.h` | Parser for the GLO-30 tile files (HGT and ESRI ASCII grid). |
 | `CopernicusDem30TileDownloader` | `data_sources/CopernicusDem30TileDownloader.h` | Tile naming, local cache and download of GLO-30 tiles. |
+| `UkEaLidarHeightDataSource` | `data_sources/UkEaLidarHeightDataSource.h` | Environment Agency LIDAR Composite DTM (1 m) source with BNG tiling. |
+| `UkEaLidarTileReader` | `data_sources/UkEaLidarTileReader.h` | Parser for the EA LIDAR tile files (ESRI ASCII grid and XYZ). |
+| `UkEaLidarTileDownloader` | `data_sources/UkEaLidarTileDownloader.h` | Tile naming, local cache and download of EA LIDAR tiles. |
+| `BngGridTile` | `data_sources/BngGridTile.h` | Elevation raster tile in its native British National Grid. |
 | `Utm32GridTile` | `data_sources/Utm32GridTile.h` | Elevation raster tile in its native UTM32 grid. |
 
 ### Earth model
@@ -177,6 +187,25 @@ Utm32Projection::forward(48.1372, 11.5756, easting, northing);   // Munich
 
 UtmProjection zone31(31);
 zone31.forward(48.8566, 2.3522, easting, northing);              // Paris
+```
+
+### British National Grid projection
+
+Not every national elevation model uses UTM: the British data products are
+published on the British National Grid (OSGB36, EPSG:27700), which uses the Airy
+1830 ellipsoid instead of WGS84. `BritishNationalGridProjection` therefore
+combines the transverse Mercator projection of the grid with the Helmert datum
+shift WGS84 -> OSGB36, so its interface takes and returns WGS84 coordinates just
+like `UtmProjection`. The Helmert parameters are the standard OS values, giving
+an accuracy of a few metres, well below the 1 m raster spacing of the LIDAR
+data. In addition it converts between coordinates and the two letter codes of
+the 100 km squares (`squareFor()` / `squareOrigin()`), which the tile names of
+the British data sets are built from.
+
+```cpp
+double easting = 0.0, northing = 0.0;
+BritishNationalGridProjection::forward(51.5074, -0.1278, easting, northing);  // London
+const std::string square = BritishNationalGridProjection::squareFor(easting, northing); // "TQ"
 ```
 
 ### Sun position
@@ -339,6 +368,50 @@ HeightDataSourceRegistry::instance().addSource(glo30);
 Its coverage is the whole world at a 30 m resolution, so the registry prefers
 the finer regional sources (such as DGM1) wherever they are available and uses
 GLO-30 as the global fallback.
+
+#### United Kingdom: Environment Agency LIDAR 1 m
+
+The English open data set "LIDAR Composite DTM 1 m" of the Environment Agency
+(published under the Open Government Licence) follows the same pattern, but on
+the British National Grid:
+
+- `BngGridTile` - one elevation raster tile kept in its **native** National Grid
+  coordinates. Geodetic queries are projected with
+  `BritishNationalGridProjection` before the bilinear interpolation, so the 1 m
+  raster is never resampled. Row 0 is the southernmost row.
+- `UkEaLidarTileReader` - parses the tile files. The official delivery format is
+  an ESRI `ASC` ASCII grid (`ncols`/`nrows`/`xllcorner`/`yllcorner`/`cellsize`/
+  `NODATA_value`, with `xllcenter`/`yllcenter` accepted as well); plain `XYZ`
+  triples as produced by conversion tools are supported too. ASCII grids store
+  the northernmost row first, so the reader flips them to the south-up ordering
+  of `BngGridTile`.
+- `UkEaLidarTileDownloader` - builds the official tile file name from the 5 km
+  block name (`sp50ne` -> `LIDARCOMP-DTM-1M-sp50ne.asc`), resolves it against a
+  base URL and a local cache directory and hands the parsed result to the data
+  source via `tileLoader()`. The HTTP GET is again an injected `FetchFunction`.
+
+```cpp
+#include "geolib/data_sources/UkEaLidarTileDownloader.h"
+
+UkEaLidarTileDownloader::Config config;
+config.cacheDirectory = "C:/data/ea_lidar";
+
+static UkEaLidarTileDownloader downloader(config,
+    [](const std::string& url, const std::string& target) {
+        return myHttpGet(url, target);
+    });
+
+auto lidar = std::make_shared<UkEaLidarHeightDataSource>(downloader.tileLoader());
+HeightDataSourceRegistry::instance().addSource(lidar);
+```
+
+`UkEaLidarHeightDataSource` projects the query to the National Grid, snaps it to
+the containing 5 km block (`tileKeyFor()`) and asks the `TileLoader` for the
+tile. As with the other sources loaded tiles are cached including negative
+results, and tile borders fall back to the neighbouring tiles. Note that the
+composite does not cover the whole bounding box of England and Wales; locations
+without data are reported as unavailable so the registry can fall back to a
+coarser source such as GLO-30.
 
 #### Other data sets
 

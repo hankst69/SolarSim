@@ -1,4 +1,5 @@
 add_library(geolib
+    src/BritishNationalGridProjection.cpp
     src/DateTimeUtc.cpp
     src/EarthModel.cpp
     src/GeoLocation.cpp
@@ -14,9 +15,13 @@ add_library(geolib
     src/data_sources/BavariaDgm1HeightDataSource.cpp
     src/data_sources/BavariaDgm1TileDownloader.cpp
     src/data_sources/BavariaDgm1TileReader.cpp
+    src/data_sources/BngGridTile.cpp
     src/data_sources/CopernicusDem30HeightDataSource.cpp
     src/data_sources/CopernicusDem30TileDownloader.cpp
     src/data_sources/CopernicusDem30TileReader.cpp
+    src/data_sources/UkEaLidarHeightDataSource.cpp
+    src/data_sources/UkEaLidarTileDownloader.cpp
+    src/data_sources/UkEaLidarTileReader.cpp
     src/data_sources/Utm32GridTile.cpp
 )
 
