@@ -38,6 +38,9 @@ public:
     /// Equation of time in minutes.
     double equationOfTime() const { return m_equationOfTimeMin; }
 
+    /// Distance to the sun in astronomical units.
+    double sunDistanceAu() const { return m_sunDistanceAu; }
+
     /// True when the sun centre is above the ground plane.
     bool isAboveHorizon() const { return m_elevationDeg > 0.0; }
 
@@ -64,6 +67,7 @@ private:
     double m_declinationDeg{0.0};
     double m_hourAngleDeg{0.0};
     double m_equationOfTimeMin{0.0};
+    double m_sunDistanceAu{1.0};
 };
 
 } // namespace geo

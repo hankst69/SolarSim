@@ -47,12 +47,16 @@ void SolarPosition::compute()
     const double sunTrueLong = geomMeanLong + sunEqOfCentre;
     const double omega = 125.04 - 1934.136 * t;
     const double sunAppLong = sunTrueLong - 0.00569 - 0.00478 * std::sin(degToRad(omega));
-
     const double meanObliq = 23.0
                              + (26.0
                                 + (21.448 - t * (46.815 + t * (0.00059 - t * 0.001813))) / 60.0)
                                    / 60.0;
     const double obliqCorr = meanObliq + 0.00256 * std::cos(degToRad(omega));
+
+    // Sun radius vector (distance earth - sun) in astronomical units.
+    const double trueAnomRad = degToRad(geomMeanAnom + sunEqOfCentre);
+    m_sunDistanceAu = 1.000001018 * (1.0 - eccent * eccent)
+                      / (1.0 + eccent * std::cos(trueAnomRad));
 
     m_declinationDeg = radToDeg(
         std::asin(std::sin(degToRad(obliqCorr)) * std::sin(degToRad(sunAppLong))));
@@ -79,8 +83,33 @@ void SolarPosition::compute()
     const double declRad = degToRad(m_declinationDeg);
     const double haRad = degToRad(m_hourAngleDeg);
 
-    double cosZenith = std::sin(latRad) * std::sin(declRad)
-                       + std::cos(latRad) * std::cos(declRad) * std::cos(haRad);
+    // Topocentric correction (diurnal parallax) using the earth model. The
+    // observer offset from the earth centre is expressed by the classical
+    // rho*sin(phi') / rho*cos(phi') terms of the reference ellipsoid.
+    const EarthModel& earth = m_location.earthModel();
+    const double a = earth.equatorialRadius();
+    const double axisRatio = earth.polarRadius() / a;
+    const double u = std::atan(axisRatio * std::tan(latRad));
+    const double hOverA = m_location.altitude() / a;
+    const double rhoSinPhi = axisRatio * std::sin(u) + hOverA * std::sin(latRad);
+    const double rhoCosPhi = std::cos(u) + hOverA * std::cos(latRad);
+
+    // Equatorial horizontal parallax of the sun (8.794" at 1 AU).
+    const double sinParallax = std::sin(degToRad(8.794 / 3600.0)) / m_sunDistanceAu;
+
+    const double dRaRad = std::atan2(-rhoCosPhi * sinParallax * std::sin(haRad),
+                                     std::cos(declRad) - rhoCosPhi * sinParallax * std::cos(haRad));
+    const double declTopoRad =
+        std::atan2((std::sin(declRad) - rhoSinPhi * sinParallax) * std::cos(dRaRad),
+                   std::cos(declRad) - rhoCosPhi * sinParallax * std::cos(haRad));
+
+    // The hour angle grows when the right ascension decreases.
+    const double haTopoRad = haRad - dRaRad;
+    m_hourAngleDeg = radToDeg(haTopoRad);
+    m_declinationDeg = radToDeg(declTopoRad);
+
+    double cosZenith = std::sin(latRad) * std::sin(declTopoRad)
+                       + std::cos(latRad) * std::cos(declTopoRad) * std::cos(haTopoRad);
     cosZenith = std::fmax(-1.0, std::fmin(1.0, cosZenith));
 
     const double zenithRad = std::acos(cosZenith);
@@ -89,7 +118,7 @@ void SolarPosition::compute()
     const double denom = std::cos(latRad) * std::sin(zenithRad);
     double azimuth = 180.0;
     if (std::fabs(denom) > 1e-12) {
-        double cosAz = (std::sin(latRad) * cosZenith - std::sin(declRad)) / denom;
+        double cosAz = (std::sin(latRad) * cosZenith - std::sin(declTopoRad)) / denom;
         cosAz = std::fmax(-1.0, std::fmin(1.0, cosAz));
         azimuth = radToDeg(std::acos(cosAz));
         if (m_hourAngleDeg > 0.0) {

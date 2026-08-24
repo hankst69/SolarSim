@@ -30,12 +30,26 @@ public:
     /// Local east/north/up coordinates of the given location.
     Vector3 toLocal(const GeoLocation& location) const;
 
+    /// Radii of curvature of the reference surface at the plane origin.
+    double meridionalRadius() const { return m_meridionalRadius; }
+    double primeVerticalRadius() const { return m_primeVerticalRadius; }
+
+    /// Drop of the curved earth surface below the tangential plane for a point
+    /// at the given local east/north offset (in metres).
+    double curvatureDrop(double eastM, double northM) const;
+
+    /// Approximate geodetic location of a local east/north/up coordinate,
+    /// taking the local radii of curvature into account.
+    GeoLocation toGeoLocation(const Vector3& local) const;
+
 private:
     GeoLocation m_origin;
     Vector3 m_originEcef;
     Vector3 m_east;
     Vector3 m_north;
     Vector3 m_up;
+    double m_meridionalRadius{0.0};
+    double m_primeVerticalRadius{0.0};
 };
 
 } // namespace geo
