@@ -3,6 +3,7 @@
 #include "TestSupport.h"
 
 #include "geolib/Angle.h"
+#include "geolib/HeightDataSourceRegistry.h"
 
 #include <cmath>
 
@@ -17,6 +18,33 @@ GeoLocation munich()
 {
     return GeoLocation(kMunichLat, kMunichLon);
 }
+
+/// Height data source delivering one constant terrain height everywhere.
+class ConstantHeightDataSource : public HeightDataSource {
+public:
+    explicit ConstantHeightDataSource(double heightM, bool hasData = true)
+        : m_heightM(heightM)
+        , m_hasData(hasData)
+    {
+    }
+
+    std::string name() const override { return "ConstantHeightDataSource"; }
+    GeoBounds coverage() const override { return GeoBounds::world(); }
+    double resolutionM() const override { return 1.0; }
+
+    bool sampleHeight(double, double, double& heightM) const override
+    {
+        if (!m_hasData) {
+            return false;
+        }
+        heightM = m_heightM;
+        return true;
+    }
+
+private:
+    double m_heightM{0.0};
+    bool m_hasData{true};
+};
 
 void testDefaults()
 {
@@ -206,6 +234,67 @@ void testLatitudeDependence()
     CHECK_TRUE(pole.radius() - equator.radius() < 50.0);
 }
 
+/// The terrain height above sea level adds to the eye height.
+void testTerrainHeight()
+{
+    const HorizonDome dome(munich(), 1.6, 500.0);
+    CHECK_NEAR(dome.viewHeight(), 1.6, 1e-12);
+    CHECK_NEAR(dome.terrainHeight(), 500.0, 1e-12);
+    CHECK_NEAR(dome.observerHeight(), 501.6, 1e-12);
+
+    const double r = EarthModel::defaultModel().localRadius(kMunichLat);
+    const double h = 501.6;
+    CHECK_NEAR(dome.radius(), r * std::sqrt(h * (2.0 * r + h)) / (r + h), 1e-3);
+
+    // Standing on a mountain the horizon is much further away.
+    CHECK_TRUE(dome.radius() > HorizonDome(munich(), 1.6).radius());
+    CHECK_NEAR(dome.curvatureDrop(), r * h / (r + h), 1e-6);
+
+    // Without a terrain height the altitude of the standpoint is used.
+    const HorizonDome viaAltitude(GeoLocation(kMunichLat, kMunichLon, 500.0), 1.6);
+    CHECK_NEAR(viaAltitude.terrainHeight(), 500.0, 1e-12);
+    CHECK_NEAR(viaAltitude.radius(), dome.radius(), 1e-6);
+}
+
+void testTerrainHeightFromDataSource()
+{
+    const HeightDataSourcePtr source = std::make_shared<ConstantHeightDataSource>(1200.0);
+    const HorizonDome dome = HorizonDome::fromHeightDataSource(munich(), source, 1.6);
+    CHECK_NEAR(dome.terrainHeight(), 1200.0, 1e-12);
+    CHECK_NEAR(dome.observerHeight(), 1201.6, 1e-12);
+    CHECK_TRUE(dome.radius() > HorizonDome(munich(), 1.6).radius());
+
+    // A source without data falls back to the altitude of the standpoint.
+    const HeightDataSourcePtr empty =
+        std::make_shared<ConstantHeightDataSource>(1200.0, false);
+    const HorizonDome fallback = HorizonDome::fromHeightDataSource(
+        GeoLocation(kMunichLat, kMunichLon, 300.0), empty, 1.6);
+    CHECK_NEAR(fallback.terrainHeight(), 300.0, 1e-12);
+
+    // The same holds for a missing source.
+    const HorizonDome noSource = HorizonDome::fromHeightDataSource(
+        GeoLocation(kMunichLat, kMunichLon, 300.0), nullptr, 1.6);
+    CHECK_NEAR(noSource.terrainHeight(), 300.0, 1e-12);
+}
+
+void testTerrainHeightFromRegistry()
+{
+    HeightDataSourceRegistry& registry = HeightDataSourceRegistry::instance();
+    const std::vector<HeightDataSourcePtr> saved = registry.sources();
+
+    registry.clear();
+    registry.addSource(std::make_shared<ConstantHeightDataSource>(800.0));
+
+    const HorizonDome dome = HorizonDome::fromHeightDataSourceRegistry(munich(), 1.6);
+    CHECK_NEAR(dome.terrainHeight(), 800.0, 1e-12);
+    CHECK_NEAR(dome.observerHeight(), 801.6, 1e-12);
+
+    registry.clear();
+    for (const HeightDataSourcePtr& source : saved) {
+        registry.addSource(source);
+    }
+}
+
 } // namespace
 
 int main()
@@ -223,5 +312,8 @@ int main()
     testPointOnDomeLiesOnSphere();
     testContains();
     testLatitudeDependence();
+    testTerrainHeight();
+    testTerrainHeightFromDataSource();
+    testTerrainHeightFromRegistry();
     return geotest::summarize("HorizonDomeTests");
 }
