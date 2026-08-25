@@ -9,6 +9,18 @@ reference frames before it arrives at the polar coordinates
 This document describes that chain as implemented in
 `geolib/src/SunPosition.cpp`.
 
+## Interface
+
+`SunPosition` provides azimuth (clockwise from north), geometric and refraction
+corrected elevation, zenith angle, declination, hour angle, the equation of time
+and the sun distance in astronomical units. The geocentric result is converted
+to the topocentric frame by a diurnal parallax correction that uses the
+ellipsoid terms of the earth model and the observer altitude. `direction()`
+returns the unit vector to the sun in the local ENU frame, `projectOnDome()`
+returns the corresponding point on the dome, and `relativeIrradiance()` returns
+`cos(zenith)` as a first energy measure - see [SunEnergy.md](SunEnergy.md) for
+absolute values in W/m^2 and [SunPath.md](SunPath.md) for sampling a whole day.
+
 ## 1. Time: no frame yet, just an epoch
 
 `DateTimeUtc::julianCentury()` converts UTC to `t`, the number of Julian
