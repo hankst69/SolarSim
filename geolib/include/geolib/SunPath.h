@@ -3,7 +3,7 @@
 #include "geolib/DateTimeUtc.h"
 #include "geolib/GeoLocation.h"
 #include "geolib/HorizonDome.h"
-#include "geolib/SolarPosition.h"
+#include "geolib/SunPosition.h"
 #include "geolib/Vector3.h"
 
 #include <vector>
@@ -13,11 +13,11 @@ namespace geo {
 /// One sampled point of the sun path.
 struct SunPathSample {
     DateTimeUtc time;      ///< UTC time of the sample.
-    SolarPosition position; ///< Sun position at that time.
+    SunPosition position; ///< Sun position at that time.
     Vector3 domePoint;     ///< Projection on the dome (local east/north/up).
 };
 
-/// Samples the SolarPosition over one UTC day and provides the resulting arc
+/// Samples the SunPosition over one UTC day and provides the resulting arc
 /// on a HorizonDome.
 class SunPath {
 public:
@@ -46,7 +46,7 @@ public:
     std::vector<Vector3> arcPoints() const;
 
     /// Sun position at an arbitrary UTC time of this day.
-    SolarPosition at(int hour, int minute = 0, double second = 0.0) const;
+    SunPosition at(int hour, int minute = 0, double second = 0.0) const;
 
     /// True if the sun rises above the horizon at all during the day.
     bool hasSunrise() const;

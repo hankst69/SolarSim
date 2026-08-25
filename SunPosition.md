@@ -1,13 +1,13 @@
-# SolarPosition — coordinate systems and calculation
+# SunPosition — coordinate systems and calculation
 
-`geo::SolarPosition` implements the NOAA solar position algorithm (accuracy of
+`geo::SunPosition` implements the NOAA solar position algorithm (accuracy of
 about one arc minute). The calculation silently walks through **four** different
 reference frames before it arrives at the polar coordinates
 (azimuth / elevation) that are relative to the `GroundPlane` of the given
 `GeoLocation`.
 
 This document describes that chain as implemented in
-`geolib/src/SolarPosition.cpp`.
+`geolib/src/SunPosition.cpp`.
 
 ## 1. Time: no frame yet, just an epoch
 
@@ -100,7 +100,7 @@ earth radii, the horizontal parallax is at most **8.8 arc seconds** — again
 below the algorithm's accuracy, so the shift is deliberately omitted.
 
 That is why `GeoLocation::altitude()` and the `EarthModel` play no role in
-`SolarPosition` at all; only latitude and longitude do.
+`SunPosition` at all; only latitude and longitude do.
 
 The only place where the observer's position genuinely becomes the origin is
 **downstream**, in `GroundPlane` and `HorizonDome`, which are true east/north/up

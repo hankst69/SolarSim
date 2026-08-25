@@ -7,7 +7,7 @@ add_library(geolib
     src/GroundPlane.cpp
     src/HeightDataSourceRegistry.cpp
     src/HorizonDome.cpp
-    src/SolarPosition.cpp
+    src/SunPosition.cpp
     src/SunPath.cpp
     src/TerrainModel.cpp
     src/TriangleMesh.cpp

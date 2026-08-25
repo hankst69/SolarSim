@@ -81,7 +81,7 @@ public:
     const TriangleMesh& sceneMesh() const { return m_sceneMesh; }
 
     /// True if the sun direction (unit vector in the local east/north/up frame,
-    /// e.g. SolarPosition::direction()) is blocked at the given local point.
+    /// e.g. SunPosition::direction()) is blocked at the given local point.
     bool isInShadow(const Vector3& localPoint, const Vector3& sunDirection) const;
 
     /// True if the terrain surface at the given east/north offset is shadowed.

@@ -89,8 +89,8 @@ void testWinterHasShorterDay()
 void testAtMatchesDirectComputation()
 {
     const SunPath path(munichDome(), 2024, 6, 21);
-    const SolarPosition viaPath = path.at(9, 30, 0.0);
-    const SolarPosition direct(GeoLocation(kMunichLat, kMunichLon),
+    const SunPosition viaPath = path.at(9, 30, 0.0);
+    const SunPosition direct(GeoLocation(kMunichLat, kMunichLon),
                                DateTimeUtc(2024, 6, 21, 9, 30, 0.0));
     CHECK_NEAR(viaPath.elevation(), direct.elevation(), 1e-9);
     CHECK_NEAR(viaPath.azimuth(), direct.azimuth(), 1e-9);
@@ -117,9 +117,9 @@ void testSunriseAndSunset()
     CHECK_EQ_INT(rise.day, 21);
 
     // At the crossing the elevation is essentially zero.
-    const SolarPosition atRise(GeoLocation(kMunichLat, kMunichLon), rise);
+    const SunPosition atRise(GeoLocation(kMunichLat, kMunichLon), rise);
     CHECK_NEAR(atRise.elevation(), 0.0, 0.2);
-    const SolarPosition atSet(GeoLocation(kMunichLat, kMunichLon), set);
+    const SunPosition atSet(GeoLocation(kMunichLat, kMunichLon), set);
     CHECK_NEAR(atSet.elevation(), 0.0, 0.2);
 }
 

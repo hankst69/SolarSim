@@ -17,7 +17,7 @@ SunPath::SunPath(const HorizonDome& dome, int year, int month, int day, int samp
     m_samples.reserve(static_cast<std::size_t>(count) + 1);
     for (int i = 0; i <= count; ++i) {
         const DateTimeUtc utc = timeAtMinutes(i * m_intervalMinutes);
-        const SolarPosition position(m_dome.standpoint(), utc);
+        const SunPosition position(m_dome.standpoint(), utc);
         m_samples.push_back({utc, position, position.projectOnDome(m_dome)});
     }
 }
@@ -54,9 +54,9 @@ std::vector<Vector3> SunPath::arcPoints() const
     return points;
 }
 
-SolarPosition SunPath::at(int hour, int minute, double second) const
+SunPosition SunPath::at(int hour, int minute, double second) const
 {
-    return SolarPosition(m_dome.standpoint(), DateTimeUtc(m_year, m_month, m_day, hour, minute, second));
+    return SunPosition(m_dome.standpoint(), DateTimeUtc(m_year, m_month, m_day, hour, minute, second));
 }
 
 bool SunPath::hasSunrise() const
@@ -72,7 +72,7 @@ double SunPath::findHorizonCrossing(double minutesA, double minutesB) const
     double hi = minutesB;
     for (int i = 0; i < 40; ++i) {
         const double mid = 0.5 * (lo + hi);
-        const SolarPosition position(m_dome.standpoint(), timeAtMinutes(mid));
+        const SunPosition position(m_dome.standpoint(), timeAtMinutes(mid));
         if (position.elevation() < 0.0) {
             lo = mid;
         } else {

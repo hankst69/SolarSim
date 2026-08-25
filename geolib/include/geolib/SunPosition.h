@@ -10,9 +10,9 @@ namespace geo {
 /// Position of the sun as seen from a location at a given UTC date/time.
 /// The angles follow the usual horizontal (topocentric) convention:
 /// azimuth is measured clockwise from north, elevation above the ground plane.
-class SolarPosition {
+class SunPosition {
 public:
-    SolarPosition(const GeoLocation& location, const DateTimeUtc& utc);
+    SunPosition(const GeoLocation& location, const DateTimeUtc& utc);
 
     const GeoLocation& location() const { return m_location; }
     const DateTimeUtc& time() const { return m_utc; }

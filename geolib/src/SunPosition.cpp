@@ -1,10 +1,10 @@
-#include "geolib/SolarPosition.h"
+#include "geolib/SunPosition.h"
 
 #include "geolib/Angle.h"
 
 // The calculation below passes through several reference frames: geocentric
 // ecliptic, geocentric equatorial, hour angle and finally the topocentric
-// horizontal frame of the ground plane. See SolarPosition.md in the repository
+// horizontal frame of the ground plane. See SunPosition.md in the repository
 // root for a detailed description of these coordinate systems and their
 // origins.
 
@@ -23,14 +23,14 @@ double wrap360(double deg)
 
 } // namespace
 
-SolarPosition::SolarPosition(const GeoLocation& location, const DateTimeUtc& utc)
+SunPosition::SunPosition(const GeoLocation& location, const DateTimeUtc& utc)
     : m_location(location)
     , m_utc(utc)
 {
     compute();
 }
 
-void SolarPosition::compute()
+void SunPosition::compute()
 {
     // NOAA solar position algorithm (accuracy of about one arc minute).
     const double t = m_utc.julianCentury();
@@ -130,7 +130,7 @@ void SolarPosition::compute()
     m_azimuthDeg = wrap360(azimuth);
 }
 
-double SolarPosition::refractedElevation() const
+double SunPosition::refractedElevation() const
 {
     // Approximate atmospheric refraction (NOAA), valid near the horizon.
     const double e = m_elevationDeg;
@@ -151,7 +151,7 @@ double SolarPosition::refractedElevation() const
     return e + refractionArcSec / 3600.0;
 }
 
-Vector3 SolarPosition::direction() const
+Vector3 SunPosition::direction() const
 {
     const double az = degToRad(m_azimuthDeg);
     const double el = degToRad(m_elevationDeg);
@@ -160,13 +160,13 @@ Vector3 SolarPosition::direction() const
     return {horizontal * std::sin(az), horizontal * std::cos(az), std::sin(el)};
 }
 
-Vector3 SolarPosition::projectOnDome(const HorizonDome& dome) const
+Vector3 SunPosition::projectOnDome(const HorizonDome& dome) const
 {
     const double elevation = std::fmax(0.0, m_elevationDeg);
     return dome.pointOnDome(m_azimuthDeg, elevation);
 }
 
-double SolarPosition::relativeIrradiance() const
+double SunPosition::relativeIrradiance() const
 {
     if (!isAboveHorizon()) {
         return 0.0;

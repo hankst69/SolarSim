@@ -78,7 +78,7 @@ covers:
 | `tests/geolib/HorizonDomeTests.cpp` | `HorizonDome` |
 | `tests/geolib/UtmProjectionTests.cpp` | `UtmProjection` / `Utm32Projection` |
 | `tests/geolib/BritishNationalGridProjectionTests.cpp` | `BritishNationalGridProjection` |
-| `tests/geolib/SolarPositionTests.cpp` | `SolarPosition` |
+| `tests/geolib/SunPositionTests.cpp` | `SunPosition` |
 | `tests/geolib/SunPathTests.cpp` | `SunPath` |
 | `tests/geolib/TriangleMeshTests.cpp` | `TriangleMesh` |
 | `tests/geolib/HeightDataSourceTests.cpp` | `GeoBounds`, `FlatHeightDataSource`, `GridHeightDataSource`, `HeightDataSourceRegistry` |
@@ -131,8 +131,8 @@ injected loader/fetch callbacks, so nothing ever touches the network.
 | `BritishNationalGridProjection` | `BritishNationalGridProjection.h` | British National Grid (OSGB36, EPSG:27700) incl. datum shift and square codes. |
 | `HorizonDome` | `HorizonDome.h` | Half sphere standing on the ground plane, reaching to the visible horizon. |
 | `DateTimeUtc` | `DateTimeUtc.h` | UTC date/time with Julian day and Julian century conversion. |
-| `SolarPosition` | `SolarPosition.h` | Sun position for a location and UTC time, projected onto the dome. |
-| `SunPath` | `SunPath.h` | Samples `SolarPosition` across a day to produce the sun arc on the dome. |
+| `SunPosition` | `SunPosition.h` | Sun position for a location and UTC time, projected onto the dome. |
+| `SunPath` | `SunPath.h` | Samples `SunPosition` across a day to produce the sun arc on the dome. |
 | `TriangleMesh` | `TriangleMesh.h` | Indexed triangle mesh in the local ENU frame with ray/triangle intersection. |
 | `TerrainModel` | `TerrainModel.h` | Height field of the ground plane built from height data, plus shadow queries. |
 | `GeoBounds` | `HeightDataSource.h` | Latitude/longitude bounding box describing the coverage of a data source. |
@@ -261,7 +261,7 @@ const std::string square = BritishNationalGridProjection::squareFor(easting, nor
 
 ### Sun position
 
-`SolarPosition` implements the NOAA solar position algorithm (accuracy of about
+`SunPosition` implements the NOAA solar position algorithm (accuracy of about
 one arc minute). It provides azimuth (clockwise from north), geometric and
 refraction corrected elevation, zenith angle, declination, hour angle, the
 equation of time and the sun distance in astronomical units. The geocentric
@@ -273,14 +273,14 @@ that uses the ellipsoid terms of the earth model and the observer altitude.
 
 The calculation passes through several reference frames (geocentric ecliptic,
 geocentric equatorial, hour angle and finally the topocentric horizontal frame
-of the ground plane). See [SolarPosition.md](SolarPosition.md) for a detailed
+of the ground plane). See [SunPosition.md](SunPosition.md) for a detailed
 description of these coordinate systems, their origins and the accuracy
 trade-offs.
 
 ### Sun path
 
 `SunPath` samples a whole UTC day (by default every 10 minutes) and stores the
-time, the `SolarPosition` and the dome point of every sample. It offers the
+time, the `SunPosition` and the dome point of every sample. It offers the
 visible arc as a point list for rendering, sunrise and sunset times refined by
 bisection, the solar noon sample and a relative daily energy value.
 
@@ -595,7 +595,7 @@ simple box shaped placeholder. Terrain and building are merged into
 Shadow casting traces a ray from a surface point towards the sun against that
 scene mesh: `isInShadow(point, sunDirection)` and
 `isSurfaceInShadow(east, north, sunDirection)` take the unit sun vector of
-`SolarPosition::direction()` and report whether the terrain or the building
+`SunPosition::direction()` and report whether the terrain or the building
 blocks it. A sun below the ground plane always counts as shadowed.
 
 `TriangleMesh` itself is a small indexed mesh with `addVertex()`/`addTriangle()`,
@@ -623,7 +623,7 @@ if (path.sunrise(rise)) {
     // rise holds the UTC sunrise time
 }
 
-SolarPosition noon = path.highestSample().position;
+SunPosition noon = path.highestSample().position;
 double elevation = noon.elevation();
 ```
 
