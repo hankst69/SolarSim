@@ -4,7 +4,7 @@ Simulation of solar light, shadows and energy levels for a given location on
 earth and a given day.
 
 The project is split into a reusable C++ class library (`geolib`) that contains
-all geo-geometrical and astronomical math, and a Qt GUI application (planned)
+all geo-geometrical and astronomical math, and a Qt GUI application (`app`)
 that visualizes the results.
 
 ## Building
@@ -81,6 +81,7 @@ covers:
 | `tests/geolib/SunPositionTests.cpp` | `SunPosition` |
 | `tests/geolib/SunPathTests.cpp` | `SunPath` |
 | `tests/geolib/SunEnergyTests.cpp` | `SunEnergy` |
+| `tests/geolib/SunLightTests.cpp` | `SunLight` |
 | `tests/geolib/TriangleMeshTests.cpp` | `TriangleMesh` |
 | `tests/geolib/HeightDataSourceTests.cpp` | `GeoBounds`, `FlatHeightDataSource`, `GridHeightDataSource`, `HeightDataSourceRegistry` |
 | `tests/geolib/TerrainModelTests.cpp` | `TerrainModel` |
@@ -135,6 +136,7 @@ injected loader/fetch callbacks, so nothing ever touches the network.
 | `SunPosition` | `SunPosition.h` | Sun position for a location and UTC time, projected onto the dome. |
 | `SunPath` | `SunPath.h` | Samples `SunPosition` across a day to produce the sun arc on the dome. |
 | `SunEnergy` | `SunEnergy.h` | Solar irradiance in W/m^2: theoretical maximum for a date and realistic value for a location, time and plane inclination. |
+| `SunLight` | `SunLight.h` | Directional light source approximating the sun as a flat area with parallel rays covering the scene. |
 | `TriangleMesh` | `TriangleMesh.h` | Indexed triangle mesh in the local ENU frame with ray/triangle intersection. |
 | `TerrainModel` | `TerrainModel.h` | Height field of the ground plane built from height data, plus shadow queries. |
 | `GeoBounds` | `HeightDataSource.h` | Latitude/longitude bounding box describing the coverage of a data source. |
@@ -176,6 +178,7 @@ folder:
 | [docs/SunPosition.md](docs/SunPosition.md) | NOAA solar position algorithm and its coordinate systems. |
 | [docs/SunPath.md](docs/SunPath.md) | Sampling the sun over a day, sunrise/sunset, solar noon. |
 | [docs/SunEnergy.md](docs/SunEnergy.md) | Irradiance in W/m^2: orbit distance, air mass, plane inclination. |
+| [docs/SunLight.md](docs/SunLight.md) | Sun as a directional area light for rendering. |
 | [docs/HeightDataSources.md](docs/HeightDataSources.md) | Height data interface, registry and the concrete data sets. |
 | [docs/TerrainModel.md](docs/TerrainModel.md) | Terrain mesh, building model, shadow casting, `TriangleMesh`. |
 
@@ -190,15 +193,18 @@ folder:
 - **Horizon dome** - `HorizonDome` is the half sphere on that plane reaching to
   the visible horizon. See [docs/HorizonDome.md](docs/HorizonDome.md).
 - **Camera** - `CameraPosition` places the viewer above the terrain, either by
-  the hemisphere rule or on the line to the sun.
+  the hemisphere rule or on the line to the sun. `fromOrbit()`, `orbited()` and
+  `zoomed()` move it interactively around the standpoint.
   See [docs/CameraPosition.md](docs/CameraPosition.md).
 - **Projections** - `UtmProjection` and `BritishNationalGridProjection` address
   the tiles of the national elevation data sets.
   See [docs/Projections.md](docs/Projections.md).
 - **Sun** - `SunPosition` computes azimuth and elevation, `SunPath` samples a
-  whole day and `SunEnergy` turns the geometry into W/m^2.
+  whole day, `SunEnergy` turns the geometry into W/m^2 and `SunLight` turns it
+  into a directional light for the renderer.
   See [docs/SunPosition.md](docs/SunPosition.md),
-  [docs/SunPath.md](docs/SunPath.md) and [docs/SunEnergy.md](docs/SunEnergy.md).
+  [docs/SunPath.md](docs/SunPath.md), [docs/SunEnergy.md](docs/SunEnergy.md)
+  and [docs/SunLight.md](docs/SunLight.md).
 - **Height data** - `HeightDataSource`, `HeightDataSourceRegistry` and the
   region specific readers/downloaders provide terrain elevation.
   See [docs/HeightDataSources.md](docs/HeightDataSources.md).
@@ -252,20 +258,38 @@ const Vector3 sun = noon.direction();
 bool shadowed = terrain.isSurfaceInShadow(20.0, -15.0, sun);
 ```
 
-## GUI application (planned)
+## SolarSim GUI application
 
-A Qt based desktop application will be added as a second CMake subdirectory on
-top of `geolib`. Planned functionality:
+`app` contains the Qt Widgets GUI on top of `geolib`. It renders the terrain
+around a location and lights it with the simulated sun.
 
-- Input of the location (latitude/longitude or map picking) and of the date.
-- 3D view of the ground plane and the horizon dome with the sun path arc of the
-  selected day and a draggable time slider.
-- Rendering of the `TerrainModel` mesh and of the building model.
+The application is built when Qt (Widgets, Qt6 preferred, Qt5 as fallback) is
+found by CMake; otherwise it is skipped with a status message and only the
+library and the tests are built. Set `-DGEOSOLAR_BUILD_APP=OFF` to skip it
+explicitly.
+
+On start it shows the location of the example above (49.56255, 11.14493) for
+the current date:
+
+- The scene is the `TerrainModel` of the standpoint, sampled from the best
+  `HeightDataSource` covering it (the flat fallback if nothing else is
+  registered).
+- Lighting combines a weak ambient/sky term with the `SunLight` of the current
+  time, including terrain cast shadows from `TerrainModel::isInShadow()`.
+- The **time slider** scrolls from sunrise to sunset of the selected date, both
+  taken from `SunPath`. The date can be changed with the date picker.
+- The **camera** is a `CameraPosition` orbiting the standpoint: drag with the
+  left mouse button to rotate, use the mouse wheel to zoom, or enter azimuth,
+  elevation and distance directly.
+
+Planned additions:
+
+- Input of the location (latitude/longitude or map picking).
+- Drawing of the sun path arc on the horizon dome.
 - Placement of simple obstacle geometry (buildings, trees) on the ground plane.
 - Energy level diagram over the day, based on the sun elevation and the shading
   of a configurable surface (for example a solar panel with a given tilt and
-  orientation).
-- Export of the computed curves.
+  orientation), and export of the computed curves.
 
 ## Roadmap
 

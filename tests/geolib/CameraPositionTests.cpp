@@ -136,6 +136,60 @@ void testForDateTimeLowSun()
     CHECK_TRUE(camera.localPosition().z > 0.0);
 }
 
+/// fromOrbit places the camera at the requested azimuth/elevation/range.
+/// The curvature drop shifts the camera down by a few millimetres, so the
+/// angles and the range are only reproduced approximately.
+void testFromOrbit()
+{
+    const HorizonDome dome(munich());
+    const CameraPosition camera = CameraPosition::fromOrbit(dome, 135.0, 30.0, 200.0);
+
+    CHECK_NEAR(camera.azimuth(), 135.0, 1e-6);
+    CHECK_NEAR(camera.elevation(), 30.0, 0.01);
+    CHECK_NEAR(camera.range(), 200.0, 0.05);
+}
+
+/// Orbiting rotates around the target without changing the distance.
+void testOrbitedKeepsRange()
+{
+    const HorizonDome dome(munich());
+    const CameraPosition start = CameraPosition::fromOrbit(dome, 180.0, 30.0, 300.0);
+    const CameraPosition moved = start.orbited(90.0, 10.0);
+
+    CHECK_NEAR(moved.azimuth(), 270.0, 1e-3);
+    CHECK_NEAR(moved.elevation(), 40.0, 0.01);
+    CHECK_NEAR(moved.range(), start.range(), 0.05);
+
+    // The azimuth wraps around into [0, 360).
+    const CameraPosition wrapped = start.orbited(240.0, 0.0);
+    CHECK_NEAR(wrapped.azimuth(), 60.0, 1e-3);
+}
+
+/// The elevation stays inside the usable range.
+void testOrbitedClampsElevation()
+{
+    const HorizonDome dome(munich());
+    const CameraPosition start = CameraPosition::fromOrbit(dome, 180.0, 30.0, 300.0);
+
+    CHECK_NEAR(start.orbited(0.0, 500.0).elevation(), CameraPosition::kMaxElevationDeg, 0.01);
+    CHECK_NEAR(start.orbited(0.0, -500.0).elevation(), CameraPosition::kMinElevationDeg, 0.01);
+}
+
+/// Zooming scales the distance and keeps the viewing angles.
+void testZoomed()
+{
+    const HorizonDome dome(munich());
+    const CameraPosition start = CameraPosition::fromOrbit(dome, 210.0, 25.0, 400.0);
+    const CameraPosition closer = start.zoomed(0.5);
+
+    CHECK_NEAR(closer.range(), 200.0, 0.05);
+    CHECK_NEAR(closer.azimuth(), start.azimuth(), 1e-3);
+    CHECK_NEAR(closer.elevation(), start.elevation(), 0.01);
+
+    // The range never drops below the minimum.
+    CHECK_NEAR(start.withRange(0.0).range(), CameraPosition::kMinRangeM, 0.01);
+}
+
 } // namespace
 
 int main()
@@ -148,5 +202,9 @@ int main()
     testTargetAndGeoLocation();
     testForDateTimeUsesSunAzimuth();
     testForDateTimeLowSun();
+    testFromOrbit();
+    testOrbitedKeepsRange();
+    testOrbitedClampsElevation();
+    testZoomed();
     return geotest::summarize("CameraPositionTests");
 }

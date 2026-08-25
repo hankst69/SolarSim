@@ -1,0 +1,299 @@
+#include "MainWindow.h"
+
+#include "SceneView.h"
+
+#include "geolib/CameraPosition.h"
+#include "geolib/GridHeightDataSource.h"
+#include "geolib/HeightDataSourceRegistry.h"
+#include "geolib/HorizonDome.h"
+
+#include <QDate>
+#include <QDateEdit>
+#include <QDoubleSpinBox>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QPushButton>
+#include <QSlider>
+#include <QStatusBar>
+#include <QVBoxLayout>
+
+#include <cmath>
+
+namespace {
+
+/// Start location of the application, taken from the README example.
+constexpr double kHomeLatitudeDeg = 49.56255;
+constexpr double kHomeLongitudeDeg = 11.14493;
+
+/// Extent (half size) of the rendered terrain patch in metres.
+constexpr double kSceneExtentM = 400.0;
+
+/// Grid spacing of the terrain mesh in metres.
+constexpr double kSceneGridSpacingM = 10.0;
+
+/// Resolution of the time slider: one step per minute.
+constexpr int kSliderStepsPerMinute = 1;
+
+double minutesOfDay(const geo::DateTimeUtc& utc)
+{
+    return utc.hour * 60.0 + utc.minute + utc.second / 60.0;
+}
+
+} // namespace
+
+MainWindow::MainWindow(QWidget* parent)
+    : QMainWindow(parent)
+    , m_location(kHomeLatitudeDeg, kHomeLongitudeDeg)
+{
+    buildUi();
+
+    const QDate today = QDate::currentDate();
+    m_dateEdit->setDate(today);
+
+    rebuildScene();
+    rebuildSunPath();
+    onResetCamera();
+
+    setWindowTitle(tr("SolarSim"));
+    resize(1080, 720);
+}
+
+MainWindow::~MainWindow() = default;
+
+void MainWindow::buildUi()
+{
+    auto* central = new QWidget(this);
+    auto* layout = new QVBoxLayout(central);
+
+    m_sceneView = new SceneView(central);
+    layout->addWidget(m_sceneView, 1);
+
+    // Time control: scroll through the day from sunrise to sunset.
+    auto* timeBox = new QGroupBox(tr("Date and time of day"), central);
+    auto* timeLayout = new QHBoxLayout(timeBox);
+
+    m_dateEdit = new QDateEdit(timeBox);
+    m_dateEdit->setCalendarPopup(true);
+    m_dateEdit->setDisplayFormat(QStringLiteral("yyyy-MM-dd"));
+    timeLayout->addWidget(new QLabel(tr("Date:"), timeBox));
+    timeLayout->addWidget(m_dateEdit);
+
+    m_timeSlider = new QSlider(Qt::Horizontal, timeBox);
+    m_timeSlider->setTracking(true);
+    timeLayout->addWidget(new QLabel(tr("Sunrise"), timeBox));
+    timeLayout->addWidget(m_timeSlider, 1);
+    timeLayout->addWidget(new QLabel(tr("Sunset"), timeBox));
+
+    m_timeLabel = new QLabel(timeBox);
+    m_timeLabel->setMinimumWidth(120);
+    timeLayout->addWidget(m_timeLabel);
+
+    layout->addWidget(timeBox);
+
+    // Camera control.
+    auto* cameraBox = new QGroupBox(tr("Camera"), central);
+    auto* cameraLayout = new QHBoxLayout(cameraBox);
+
+    m_azimuthSpin = new QDoubleSpinBox(cameraBox);
+    m_azimuthSpin->setRange(0.0, 360.0);
+    m_azimuthSpin->setWrapping(true);
+    m_azimuthSpin->setSuffix(QStringLiteral(" deg"));
+
+    m_elevationSpin = new QDoubleSpinBox(cameraBox);
+    m_elevationSpin->setRange(geo::CameraPosition::kMinElevationDeg,
+                              geo::CameraPosition::kMaxElevationDeg);
+    m_elevationSpin->setSuffix(QStringLiteral(" deg"));
+
+    m_rangeSpin = new QDoubleSpinBox(cameraBox);
+    m_rangeSpin->setRange(geo::CameraPosition::kMinRangeM, 20000.0);
+    m_rangeSpin->setSingleStep(10.0);
+    m_rangeSpin->setSuffix(QStringLiteral(" m"));
+
+    auto* cameraForm = new QFormLayout();
+    cameraForm->addRow(tr("Azimuth:"), m_azimuthSpin);
+    cameraForm->addRow(tr("Elevation:"), m_elevationSpin);
+    cameraForm->addRow(tr("Distance:"), m_rangeSpin);
+    cameraLayout->addLayout(cameraForm);
+
+    auto* resetButton = new QPushButton(tr("Reset camera"), cameraBox);
+    cameraLayout->addWidget(resetButton);
+
+    m_sunLabel = new QLabel(cameraBox);
+    cameraLayout->addWidget(m_sunLabel, 1);
+
+    layout->addWidget(cameraBox);
+
+    setCentralWidget(central);
+    statusBar();
+
+    connect(m_dateEdit, &QDateEdit::dateChanged, this, &MainWindow::onDateChanged);
+    connect(m_timeSlider, &QSlider::valueChanged, this, &MainWindow::onTimeSliderChanged);
+    connect(m_azimuthSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
+            &MainWindow::onCameraSpinChanged);
+    connect(m_elevationSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
+            &MainWindow::onCameraSpinChanged);
+    connect(m_rangeSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
+            &MainWindow::onCameraSpinChanged);
+    connect(resetButton, &QPushButton::clicked, this, &MainWindow::onResetCamera);
+    connect(m_sceneView, &SceneView::cameraChanged, this, &MainWindow::onCameraChangedByView);
+}
+
+void MainWindow::rebuildScene()
+{
+    // Make sure at least the flat fallback source is available, so the app also
+    // runs without any downloaded elevation tiles.
+    geo::HeightDataSourceRegistry& registry = geo::HeightDataSourceRegistry::instance();
+    if (registry.sources().empty()) {
+        registry.addSource(std::make_shared<geo::FlatHeightDataSource>());
+    }
+
+    const geo::HorizonDome dome = geo::HorizonDome::fromHeightDataSourceRegistry(m_location);
+
+    geo::TerrainModel::Config config;
+    config.extentM = kSceneExtentM;
+    config.gridSpacingM = kSceneGridSpacingM;
+    config.clipToDomeCircle = false;
+
+    m_terrain = std::make_shared<geo::TerrainModel>(
+        dome, registry.selectSource(m_location), config);
+
+    m_sceneView->setTerrain(m_terrain);
+}
+
+void MainWindow::rebuildSunPath()
+{
+    if (!m_terrain) {
+        return;
+    }
+
+    const QDate date = m_dateEdit->date();
+    m_sunPath = std::make_unique<geo::SunPath>(m_terrain->dome(), date.year(), date.month(),
+                                               date.day());
+
+    // The slider spans sunrise to sunset. Polar day/night falls back to the
+    // whole day.
+    geo::DateTimeUtc rise;
+    geo::DateTimeUtc set;
+    if (m_sunPath->sunrise(rise) && m_sunPath->sunset(set)) {
+        m_dayStartMinutes = minutesOfDay(rise);
+        m_dayEndMinutes = minutesOfDay(set);
+    } else {
+        m_dayStartMinutes = 0.0;
+        m_dayEndMinutes = 24.0 * 60.0;
+    }
+    if (m_dayEndMinutes <= m_dayStartMinutes) {
+        m_dayEndMinutes = m_dayStartMinutes + 1.0;
+    }
+
+    const int steps =
+        static_cast<int>(std::lround((m_dayEndMinutes - m_dayStartMinutes) * kSliderStepsPerMinute));
+
+    const bool wasUpdating = m_updatingControls;
+    m_updatingControls = true;
+    m_timeSlider->setRange(0, std::max(1, steps));
+    m_timeSlider->setValue(m_timeSlider->maximum() / 2); // start at solar noon
+    m_updatingControls = wasUpdating;
+
+    applyTime(m_timeSlider->value());
+}
+
+geo::DateTimeUtc MainWindow::timeForSlider(int value) const
+{
+    const QDate date = m_dateEdit->date();
+
+    double minutes = m_dayStartMinutes + static_cast<double>(value) / kSliderStepsPerMinute;
+    minutes = std::min(minutes, m_dayEndMinutes);
+
+    const int hour = static_cast<int>(minutes / 60.0);
+    const int minute = static_cast<int>(minutes) % 60;
+    const double second = (minutes - std::floor(minutes)) * 60.0;
+
+    return geo::DateTimeUtc(date.year(), date.month(), date.day(), hour, minute, second);
+}
+
+void MainWindow::applyTime(int sliderValue)
+{
+    const geo::DateTimeUtc utc = timeForSlider(sliderValue);
+    m_sceneView->setDateTime(utc);
+    updateStatus(utc);
+}
+
+void MainWindow::updateStatus(const geo::DateTimeUtc& utc)
+{
+    m_timeLabel->setText(QStringLiteral("%1:%2 UTC")
+                             .arg(utc.hour, 2, 10, QLatin1Char('0'))
+                             .arg(utc.minute, 2, 10, QLatin1Char('0')));
+
+    const geo::SunPosition sun(m_location, utc);
+    m_sunLabel->setText(tr("Sun: azimuth %1 deg, elevation %2 deg")
+                            .arg(sun.azimuth(), 0, 'f', 1)
+                            .arg(sun.elevation(), 0, 'f', 1));
+
+    statusBar()->showMessage(tr("Location %1, %2 - terrain %3")
+                                 .arg(m_location.latitude(), 0, 'f', 5)
+                                 .arg(m_location.longitude(), 0, 'f', 5)
+                                 .arg(m_terrain && m_terrain->hasHeightData() && m_terrain->source()
+                                          ? QString::fromStdString(m_terrain->source()->name())
+                                          : tr("no elevation data")));
+}
+
+void MainWindow::updateCameraControls()
+{
+    const geo::CameraPosition* camera = m_sceneView->camera();
+    if (!camera) {
+        return;
+    }
+
+    m_updatingControls = true;
+    m_azimuthSpin->setValue(camera->azimuth());
+    m_elevationSpin->setValue(camera->elevation());
+    m_rangeSpin->setValue(camera->range());
+    m_updatingControls = false;
+}
+
+void MainWindow::onDateChanged()
+{
+    rebuildSunPath();
+}
+
+void MainWindow::onTimeSliderChanged(int value)
+{
+    if (m_updatingControls) {
+        return;
+    }
+    applyTime(value);
+}
+
+void MainWindow::onCameraSpinChanged()
+{
+    if (m_updatingControls || !m_terrain) {
+        return;
+    }
+
+    m_sceneView->setCamera(geo::CameraPosition::fromOrbit(m_terrain->dome(),
+                                                          m_azimuthSpin->value(),
+                                                          m_elevationSpin->value(),
+                                                          m_rangeSpin->value()));
+}
+
+void MainWindow::onCameraChangedByView()
+{
+    updateCameraControls();
+}
+
+void MainWindow::onResetCamera()
+{
+    if (!m_terrain) {
+        return;
+    }
+
+    // Start with an overview of the whole modelled patch.
+    const geo::CameraPosition camera = geo::CameraPosition::fromOrbit(
+        m_terrain->dome(), m_terrain->dome().standpoint().latitude() >= 0.0 ? 180.0 : 0.0, 25.0,
+        m_terrain->extent() * 1.5);
+
+    m_sceneView->setCamera(camera);
+    updateCameraControls();
+}

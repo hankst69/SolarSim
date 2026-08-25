@@ -55,6 +55,31 @@ horizontal distance stays at `distanceM`, the height follows the sun elevation
 below the horizon only its azimuth is used and the camera keeps the default
 height, so the view stays usable at night.
 
+## Interactive camera
+
+For interactive viewing the camera moves on a sphere around the dome centre.
+`fromOrbit()` places it by azimuth, elevation and slant range:
+
+```cpp
+CameraPosition camera = CameraPosition::fromOrbit(dome, 180.0, 25.0, 600.0);
+```
+
+`orbited()` rotates it around the target and `zoomed()` moves it along the view
+direction; both return a new camera and keep the target fixed, so the standpoint
+always stays in the centre of the view:
+
+```cpp
+camera = camera.orbited(-10.0, 5.0);  // 10 deg left, 5 deg up
+camera = camera.zoomed(0.9);          // 10 % closer
+camera = camera.withRange(300.0);     // fixed distance, angles unchanged
+```
+
+The elevation is clamped to `[kMinElevationDeg, kMaxElevationDeg]` (1 deg to
+89 deg) so the camera never ends up inside the ground plane or exactly in the
+zenith, and the range never drops below `kMinRangeM`. Because the height is
+still measured through the curvature drop, `elevation()` and `range()` reproduce
+the requested values only to within a few millimetres.
+
 ## Height and earth curvature
 
 `heightAboveTerrain()` is always measured from the terrain ground level of the
@@ -81,7 +106,9 @@ consistent with large distances too.
 | `horizontalDistance()` | Distance from the dome centre in the ground plane. |
 | `azimuth()` | Camera azimuth seen from the centre, degrees clockwise from north. |
 | `elevation()` | Camera elevation seen from the centre, degrees above the plane. |
+| `range()` | Slant range from the centre to the camera (metres). |
 | `viewDirection()` | Unit direction from the camera towards the centre. |
+| `dome()` | Dome the camera looks at. |
 
 ## Related
 

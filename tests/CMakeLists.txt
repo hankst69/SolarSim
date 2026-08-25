@@ -29,6 +29,7 @@ add_geolib_test(BritishNationalGridProjectionTests geolib/BritishNationalGridPro
 add_geolib_test(SunPositionTests geolib/SunPositionTests.cpp)
 add_geolib_test(SunPathTests geolib/SunPathTests.cpp)
 add_geolib_test(SunEnergyTests geolib/SunEnergyTests.cpp)
+add_geolib_test(SunLightTests geolib/SunLightTests.cpp)
 add_geolib_test(TriangleMeshTests geolib/TriangleMeshTests.cpp)
 add_geolib_test(HeightDataSourceTests geolib/HeightDataSourceTests.cpp)
 add_geolib_test(TerrainModelTests geolib/TerrainModelTests.cpp)

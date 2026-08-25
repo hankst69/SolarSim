@@ -27,10 +27,10 @@ Vector3 localPointAt(const HorizonDome& dome, double azimuthDeg, double distance
 
 } // namespace
 
-CameraPosition::CameraPosition(const GroundPlane& groundPlane, const Vector3& local,
-                               double heightM)
-    : m_target(groundPlane.origin())
-    , m_groundPlane(groundPlane)
+CameraPosition::CameraPosition(const HorizonDome& dome, const Vector3& local, double heightM)
+    : m_dome(dome)
+    , m_target(dome.groundPlane().origin())
+    , m_groundPlane(dome.groundPlane())
     , m_local(local)
     , m_heightM(heightM)
 {
@@ -43,8 +43,7 @@ CameraPosition CameraPosition::initial(const HorizonDome& dome, double heightM,
     // north, so that the sun path is in front of the camera. On the equator we
     // keep the northern hemisphere convention.
     const double azimuthDeg = (dome.standpoint().latitude() >= 0.0) ? 180.0 : 0.0;
-    return CameraPosition(dome.groundPlane(), localPointAt(dome, azimuthDeg, distanceM, heightM),
-                          heightM);
+    return CameraPosition(dome, localPointAt(dome, azimuthDeg, distanceM, heightM), heightM);
 }
 
 CameraPosition CameraPosition::initial(const GeoLocation& location, double heightM,
@@ -69,8 +68,7 @@ CameraPosition CameraPosition::forDateTime(const HorizonDome& dome, const DateTi
         }
     }
 
-    return CameraPosition(dome.groundPlane(),
-                          localPointAt(dome, sun.azimuth(), distanceM, cameraHeightM),
+    return CameraPosition(dome, localPointAt(dome, sun.azimuth(), distanceM, cameraHeightM),
                           cameraHeightM);
 }
 
@@ -79,6 +77,47 @@ CameraPosition CameraPosition::forDateTime(const GeoLocation& location, const Da
 {
     return forDateTime(HorizonDome::fromHeightDataSourceRegistry(location), utc, heightM,
                        distanceM);
+}
+
+CameraPosition CameraPosition::fromOrbit(const HorizonDome& dome, double azimuthDeg,
+                                         double elevationDeg, double rangeM)
+{
+    if (elevationDeg < kMinElevationDeg) {
+        elevationDeg = kMinElevationDeg;
+    } else if (elevationDeg > kMaxElevationDeg) {
+        elevationDeg = kMaxElevationDeg;
+    }
+    if (rangeM < kMinRangeM) {
+        rangeM = kMinRangeM;
+    }
+
+    const double elevation = degToRad(elevationDeg);
+    const double distanceM = rangeM * std::cos(elevation);
+    const double heightM = rangeM * std::sin(elevation);
+
+    return CameraPosition(dome, localPointAt(dome, azimuthDeg, distanceM, heightM), heightM);
+}
+
+CameraPosition CameraPosition::orbited(double deltaAzimuthDeg, double deltaElevationDeg) const
+{
+    double azimuthDeg = std::fmod(azimuth() + deltaAzimuthDeg, 360.0);
+    if (azimuthDeg < 0.0) {
+        azimuthDeg += 360.0;
+    }
+    return fromOrbit(m_dome, azimuthDeg, elevation() + deltaElevationDeg, range());
+}
+
+CameraPosition CameraPosition::zoomed(double factor) const
+{
+    if (factor <= 0.0) {
+        factor = 1.0;
+    }
+    return withRange(range() * factor);
+}
+
+CameraPosition CameraPosition::withRange(double rangeM) const
+{
+    return fromOrbit(m_dome, azimuth(), elevation(), rangeM);
 }
 
 Vector3 CameraPosition::ecefPosition() const
@@ -112,6 +151,11 @@ double CameraPosition::elevation() const
         return m_local.z >= 0.0 ? 90.0 : -90.0;
     }
     return radToDeg(std::atan2(m_local.z, horizontalM));
+}
+
+double CameraPosition::range() const
+{
+    return m_local.length();
 }
 
 Vector3 CameraPosition::viewDirection() const

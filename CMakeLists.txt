@@ -7,6 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(geolib)
 
+option(GEOSOLAR_BUILD_APP "Build the SolarSim Qt GUI application" ON)
+if(GEOSOLAR_BUILD_APP)
+    add_subdirectory(app)
+endif()
+
 option(GEOSOLAR_BUILD_TESTS "Build the geolib unit tests" ON)
 if(GEOSOLAR_BUILD_TESTS)
     enable_testing()
