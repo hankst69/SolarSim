@@ -171,6 +171,7 @@ folder:
 | [docs/EarthModel.md](docs/EarthModel.md) | Earth shape interface, WGS84 ellipsoid and sphere. |
 | [docs/GroundPlane.md](docs/GroundPlane.md) | Tangential plane, local ENU frame, curvature drop. |
 | [docs/HorizonDome.md](docs/HorizonDome.md) | Horizon distance and the dome the sun path is drawn on. |
+| [docs/CameraPosition.md](docs/CameraPosition.md) | Initial camera placement for a location or a date/time. |
 | [docs/Projections.md](docs/Projections.md) | UTM and British National Grid projections. |
 | [docs/SunPosition.md](docs/SunPosition.md) | NOAA solar position algorithm and its coordinate systems. |
 | [docs/SunPath.md](docs/SunPath.md) | Sampling the sun over a day, sunrise/sunset, solar noon. |
@@ -188,6 +189,9 @@ folder:
   See [docs/GroundPlane.md](docs/GroundPlane.md).
 - **Horizon dome** - `HorizonDome` is the half sphere on that plane reaching to
   the visible horizon. See [docs/HorizonDome.md](docs/HorizonDome.md).
+- **Camera** - `CameraPosition` places the viewer above the terrain, either by
+  the hemisphere rule or on the line to the sun.
+  See [docs/CameraPosition.md](docs/CameraPosition.md).
 - **Projections** - `UtmProjection` and `BritishNationalGridProjection` address
   the tiles of the national elevation data sets.
   See [docs/Projections.md](docs/Projections.md).

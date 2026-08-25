@@ -1,5 +1,6 @@
 add_library(geolib
     src/BritishNationalGridProjection.cpp
+    src/CameraPosition.cpp
     src/DateTimeUtc.cpp
     src/EarthModel.cpp
     src/GeoLocation.cpp
