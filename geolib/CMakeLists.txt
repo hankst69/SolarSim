@@ -9,6 +9,7 @@ add_library(geolib
     src/HorizonDome.cpp
     src/SunPosition.cpp
     src/SunPath.cpp
+    src/SunEnergy.cpp
     src/TerrainModel.cpp
     src/TriangleMesh.cpp
     src/UtmProjection.cpp

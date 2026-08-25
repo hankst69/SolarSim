@@ -80,6 +80,7 @@ covers:
 | `tests/geolib/BritishNationalGridProjectionTests.cpp` | `BritishNationalGridProjection` |
 | `tests/geolib/SunPositionTests.cpp` | `SunPosition` |
 | `tests/geolib/SunPathTests.cpp` | `SunPath` |
+| `tests/geolib/SunEnergyTests.cpp` | `SunEnergy` |
 | `tests/geolib/TriangleMeshTests.cpp` | `TriangleMesh` |
 | `tests/geolib/HeightDataSourceTests.cpp` | `GeoBounds`, `FlatHeightDataSource`, `GridHeightDataSource`, `HeightDataSourceRegistry` |
 | `tests/geolib/TerrainModelTests.cpp` | `TerrainModel` |
@@ -133,6 +134,7 @@ injected loader/fetch callbacks, so nothing ever touches the network.
 | `DateTimeUtc` | `DateTimeUtc.h` | UTC date/time with Julian day and Julian century conversion. |
 | `SunPosition` | `SunPosition.h` | Sun position for a location and UTC time, projected onto the dome. |
 | `SunPath` | `SunPath.h` | Samples `SunPosition` across a day to produce the sun arc on the dome. |
+| `SunEnergy` | `SunEnergy.h` | Solar irradiance in W/m^2: theoretical maximum for a date and realistic value for a location, time and plane inclination. |
 | `TriangleMesh` | `TriangleMesh.h` | Indexed triangle mesh in the local ENU frame with ray/triangle intersection. |
 | `TerrainModel` | `TerrainModel.h` | Height field of the ground plane built from height data, plus shadow queries. |
 | `GeoBounds` | `HeightDataSource.h` | Latitude/longitude bounding box describing the coverage of a data source. |
@@ -304,6 +306,26 @@ trade-offs.
 time, the `SunPosition` and the dome point of every sample. It offers the
 visible arc as a point list for rendering, sunrise and sunset times refined by
 bisection, the solar noon sample and a relative daily energy value.
+
+### Sun energy
+
+`SunEnergy` turns that geometry into a power per area in W/m^2. Constructed
+with a date only it delivers the theoretical maximum
+(`theoreticalIrradiance()`): the solar constant 1361 W/m^2 scaled by the inverse
+square of the earth - sun distance of that date, i.e. perpendicular irradiation
+at sea level without any atmosphere (about 1408 W/m^2 at perihelion and
+1316 W/m^2 at aphelion).
+
+Constructed with a `GeoLocation` and a UTC time it adds the realistic part: the
+relative optical air mass (`airMass()`, Kasten/Young) describes how long the
+light path through the atmosphere is, the clear sky transmittance
+(`atmosphericTransmittance()`) damps the beam accordingly, and the cosine of the
+angle between the sun and the plane normal accounts for the inclination of the
+receiving surface. `directNormalIrradiance()`, `groundIrradiance()`,
+`irradianceOnPlane()`, `irradianceOnTiltedPlane()` and
+`irradianceOnGroundPlane()` expose the results. See
+[SunEnergy.md](SunEnergy.md) for the formulas, the reference values and the
+limits of the model (direct beam only, clear sky).
 
 ### Height data sources
 
