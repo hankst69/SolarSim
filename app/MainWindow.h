@@ -5,6 +5,10 @@
 #include "geolib/SunPath.h"
 #include "geolib/TerrainModel.h"
 
+#include "geolib/data_sources/BavariaDgm1HeightDataSource.h"
+#include "geolib/data_sources/BavariaDgm1TileDownloader.h"
+#include "geolib/data_sources/WorldCopernicusDem30HeightDataSource.h"
+
 #include <QMainWindow>
 
 #include <memory>
@@ -58,4 +62,12 @@ private:
     QDoubleSpinBox* m_rangeSpin{nullptr};
 
     bool m_updatingControls{false};
+
+    geo::BavariaDgm1TileDownloader::Config m_hdsBavDgm1_config;
+    //std::make_shared<geo::BavariaDgm1HeightDataSource> m_hdsBavDgm1_downloader;
+    // 
+    //static geoBavariaDgm1TileDownloader m_hdsBavDgm1_downloader = geoBavariaDgm1TileDownloader(config,
+    //    [](const std::string& url, const std::string& target) {
+    //        return myHttpGet(url, target);   // libcurl, Qt, WinHTTP, ...
+    //    });
 };

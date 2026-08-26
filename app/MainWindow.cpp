@@ -4,8 +4,8 @@
 
 #include "geolib/CameraPosition.h"
 #include "geolib/GridHeightDataSource.h"
-#include "geolib/HeightDataSourceRegistry.h"
 #include "geolib/HorizonDome.h"
+#include "geolib/HeightDataSourceRegistry.h"
 
 #include <QDate>
 #include <QDateEdit>
@@ -42,6 +42,7 @@ double minutesOfDay(const geo::DateTimeUtc& utc)
 }
 
 } // namespace
+
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
@@ -147,6 +148,7 @@ void MainWindow::rebuildScene()
     geo::HeightDataSourceRegistry& registry = geo::HeightDataSourceRegistry::instance();
     if (registry.sources().empty()) {
         registry.addSource(std::make_shared<geo::FlatHeightDataSource>());
+        //registry.addSource(std::make_shared<geo::BavariaDgm1HeightDataSource>(m_hdsBavDgm1_downloader.tileLoader()));
     }
 
     const geo::HorizonDome dome = geo::HorizonDome::fromHeightDataSourceRegistry(m_location);
