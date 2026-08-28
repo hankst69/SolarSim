@@ -63,8 +63,8 @@ BavariaDgm1TileDownloader::BavariaDgm1TileDownloader(Config config, FetchFunctio
 
 std::string BavariaDgm1TileDownloader::fileNameFor(const TileKey& key) const
 {
-    return "dgm1_32_" + std::to_string(key.eastKm) + "_" + std::to_string(key.northKm) + "_1_by" +
-           m_config.fileExtension;
+    //return "dgm1_32_" + std::to_string(key.eastKm) + "_" + std::to_string(key.northKm) + "_1_by" + m_config.fileExtension;
+    return std::to_string(key.eastKm) + "_" + std::to_string(key.northKm) + m_config.fileExtension;
 }
 
 std::string BavariaDgm1TileDownloader::urlFor(const TileKey& key) const

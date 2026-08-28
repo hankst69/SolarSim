@@ -236,6 +236,9 @@ bool downloadFileWinHttp(const std::string& url, const std::string& targetPath,
     return true;
 }
 
+//https://download1.bayernwolke.de/a/dgm/dgm1/dgm1_32_636_5529_1_by.xyz
+//https://download1.bayernwolke.de/a/dgm/dgm1xyz/636_5529.zip
+
 bool fetchUrl(const std::string& url, const std::string& targetPath,
               const BasicAuthCredentials& credentials)
 {
@@ -249,6 +252,7 @@ bool fetchUrl(const std::string& url, const std::string& targetPath,
     if (!ok) {
         std::cerr << "Download failed: " << error << '\n';
     }
+
     return ok;
 }
 
@@ -295,8 +299,8 @@ int main()
 
     geo::BavariaDgm1TileDownloader::Config bavariaConfig;
     bavariaConfig.cacheDirectory = (cacheRoot / "bavaria_dgm1").string();
-    bavariaConfig.baseUrl = "https://download1.bayernwolke.de/a/dgm/dgm1";
-    bavariaConfig.fileExtension = ".xyz";
+    bavariaConfig.baseUrl = "https://download1.bayernwolke.de/a/dgm/dgm1xyz";
+    bavariaConfig.fileExtension = ".zip";
     bavariaConfig.allowDownload = true;
 
     geo::BavariaDgm1TileDownloader bavariaDownloader(

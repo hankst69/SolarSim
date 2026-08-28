@@ -64,7 +64,7 @@ WorldCopernicusDem30HeightDataSource::tile(const TileKey& key) const
 bool WorldCopernicusDem30HeightDataSource::sampleHeight(double latitudeDeg, double longitudeDeg,
                                                    double& heightM) const
 {
-    if (!covers(latitudeDeg, longitudeDeg)) {
+     if (!covers(latitudeDeg, longitudeDeg)) {
         return false;
     }
 

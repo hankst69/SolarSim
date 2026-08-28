@@ -2,13 +2,13 @@
 #
 # Builds the GeoSolar solution and runs the geolib unit tests with CTest.
 #
-# Calls scripts/linux_build.sh and then executes the test suites registered in
+# Calls scripts/build.sh and then executes the test suites registered in
 # tests/CMakeLists.txt. Each suite is a standalone executable that returns a
 # non zero exit code on failure, so a non zero exit code of this script means
 # at least one test failed.
 #
 # Usage:
-#   ./scripts/linux_test.sh [options]
+#   ./scripts/test.sh [options]
 #
 # Options:
 #   -c, --configuration <cfg>  CMake build type (Debug, Release, RelWithDebInfo,
@@ -22,9 +22,9 @@
 #   -h, --help                 Show this help.
 #
 # Examples:
-#   ./scripts/linux_test.sh
-#   ./scripts/linux_test.sh --filter UsaUsgs3Dep1m
-#   ./scripts/linux_test.sh --configuration Release --clean
+#   ./scripts/test.sh
+#   ./scripts/test.sh --filter UsaUsgs3Dep1m
+#   ./scripts/test.sh --configuration Release --clean
 
 set -euo pipefail
 
@@ -72,7 +72,7 @@ if [[ $skip_build -eq 0 ]]; then
     if [[ -n "$jobs" ]]; then
         build_args+=(--jobs "$jobs")
     fi
-    "$script_dir/linux_build.sh" "${build_args[@]}"
+    "$script_dir/build.sh" "${build_args[@]}"
 fi
 
 if [[ ! -d "$build_dir" ]]; then

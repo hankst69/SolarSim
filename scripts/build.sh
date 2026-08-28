@@ -7,7 +7,7 @@
 # to the sources.
 #
 # Usage:
-#   ./scripts/linux_build.sh [options]
+#   ./scripts/build.sh [options]
 #
 # Options:
 #   -c, --configuration <cfg>  CMake build type (Debug, Release, RelWithDebInfo,
@@ -16,13 +16,13 @@
 #                              platform default generator if Ninja is missing.
 #   -b, --build-dir <dir>      Build tree location. Default: <repo>/build/<cfg>.
 #   -j, --jobs <n>             Parallel build jobs. Default: number of CPUs.
-#       --no-tests             Configure with GEOSOLAR_BUILD_TESTS=OFF.
+#       --no-tests             Configure with BUILD_GEOLIB_TESTS=OFF.
 #       --clean                Delete the build tree before configuring.
 #   -h, --help                 Show this help.
 #
 # Examples:
-#   ./scripts/linux_build.sh
-#   ./scripts/linux_build.sh --configuration Release --clean
+#   ./scripts/build.sh
+#   ./scripts/build.sh --configuration Release --clean
 
 set -euo pipefail
 
@@ -88,7 +88,7 @@ if [[ -n "$generator" ]]; then
     configure_args+=(-G "$generator")
 fi
 if [[ $no_tests -eq 1 ]]; then
-    configure_args+=(-DGEOSOLAR_BUILD_TESTS=OFF)
+    configure_args+=(-DBUILD_GEOLIB_TESTS=OFF)
 fi
 
 echo "Configuring ($configuration) in $build_dir"

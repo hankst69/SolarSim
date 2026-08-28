@@ -3,7 +3,7 @@
     Builds the GeoSolar solution and runs the geolib unit tests with CTest.
 
 .DESCRIPTION
-    Calls scripts/win_build.ps1 and then executes the test suites registered in
+    Calls scripts/build.ps1 and then executes the test suites registered in
     tests/CMakeLists.txt. Each suite is a standalone executable that returns a
     non zero exit code on failure, so a non zero exit code of this script means
     at least one test failed.
@@ -28,13 +28,13 @@
     Run the tests against the existing build tree without rebuilding.
 
 .EXAMPLE
-    ./scripts/win_test.ps1
+    ./scripts/test.ps1
 
 .EXAMPLE
-    ./scripts/win_test.ps1 -Filter UsaUsgs3Dep1m
+    ./scripts/test.ps1 -Filter UsaUsgs3Dep1m
 
 .EXAMPLE
-    ./scripts/win_test.ps1 -Configuration Release -Clean
+    ./scripts/test.ps1 -Configuration Release -Clean
 #>
 [CmdletBinding()]
 param(
@@ -54,11 +54,13 @@ if (-not $BuildDir) {
 }
 
 if (-not $SkipBuild) {
-    $buildScript = Join-Path $PSScriptRoot 'win_build.ps1'
+    $buildScript = Join-Path $PSScriptRoot 'build.ps1'
     & $buildScript -Configuration $Configuration -BuildDir $BuildDir -Clean:$Clean
 }
 
-if (-not (Test-Path $BuildDir)) {
+$TestsDir = Join-Path $BuildDir "tests"
+
+if (-not (Test-Path $TestsDir)) {
     throw "Build tree $BuildDir does not exist. Run without -SkipBuild first."
 }
 
@@ -66,12 +68,15 @@ if (-not (Get-Command ctest -ErrorAction SilentlyContinue)) {
     throw 'ctest was not found on PATH. Run this from a Visual Studio developer prompt.'
 }
 
-$ctestArgs = @('--test-dir', $BuildDir, '--build-config', $Configuration, '--output-on-failure')
+$ctestArgs = @('--test-dir', $TestsDir, '--build-config', $Configuration, '--output-on-failure')
 if ($Filter) {
     $ctestArgs += @('-R', $Filter)
 }
 
+Write-Host
 Write-Host "Running tests ($Configuration)" -ForegroundColor Cyan
+Write-Host "ctest $ctestArgs"
+
 ctest @ctestArgs
 $testExitCode = $LASTEXITCODE
 

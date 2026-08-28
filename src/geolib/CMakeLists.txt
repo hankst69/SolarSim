@@ -36,5 +36,3 @@ add_library(geolib
 )
 
 target_include_directories(geolib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/samples ${CMAKE_CURRENT_BINARY_DIR}/samples)

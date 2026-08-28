@@ -5,15 +5,22 @@ project(GeoSolar LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_subdirectory(geolib)
+option(BUILD_GEOLIB_TESTS    "Build the geolib unit tests" ON)
+option(BUILD_GEOLIB_EXAMPLES "Build the geolib examples" ON)
+option(BUILD_SOLARSIM_APP    "Build the SolarSim Qt GUI application" ON)
 
-option(GEOSOLAR_BUILD_APP "Build the SolarSim Qt GUI application" ON)
-if(GEOSOLAR_BUILD_APP)
-    add_subdirectory(app)
-endif()
+add_subdirectory(src/geolib)
 
-option(GEOSOLAR_BUILD_TESTS "Build the geolib unit tests" ON)
-if(GEOSOLAR_BUILD_TESTS)
+if(BUILD_GEOLIB_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+if(BUILD_GEOLIB_EXAMPLES)
+    add_subdirectory(src/examples)
+endif()
+
+if(BUILD_SOLARSIM_APP)
+    add_subdirectory(src/app)
+endif()
+

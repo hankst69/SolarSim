@@ -35,8 +35,8 @@ void writeXyzTile(const std::string& path, double originEast, double originNorth
 void removeCache()
 {
     // The tests only ever create these files.
-    const char* names[] = {"dgm1_32_690_5334_1_by.xyz", "dgm1_32_691_5334_1_by.xyz",
-                           "dgm1_32_692_5334_1_by.xyz"};
+    const char* names[] = {"690_5334.xyz", "691_5334.xyz",
+                           "692_5334.xyz"};
     for (const char* name : names) {
         std::remove(cacheFile(name).c_str());
     }
@@ -54,11 +54,11 @@ BavariaDgm1TileDownloader::Config makeConfig()
 void testFileNaming()
 {
     const BavariaDgm1TileDownloader downloader(makeConfig());
-    CHECK_EQ_STR(downloader.fileNameFor(TileKey{690, 5334}), "dgm1_32_690_5334_1_by.xyz");
+    CHECK_EQ_STR(downloader.fileNameFor(TileKey{690, 5334}), "690_5334.xyz");
     CHECK_EQ_STR(downloader.urlFor(TileKey{690, 5334}),
-                 "https://example.invalid/dgm1/dgm1_32_690_5334_1_by.xyz");
+                 "https://example.invalid/dgm1/690_5334.xyz");
     CHECK_EQ_STR(downloader.cachePathFor(TileKey{690, 5334}),
-                 "dgm1_test_cache/dgm1_32_690_5334_1_by.xyz");
+                 "dgm1_test_cache/690_5334.xyz");
 }
 
 /// A trailing slash on the base URL must not produce a double slash.
@@ -68,7 +68,7 @@ void testUrlWithTrailingSlash()
     config.baseUrl = "https://example.invalid/dgm1/";
     const BavariaDgm1TileDownloader downloader(config);
     CHECK_EQ_STR(downloader.urlFor(TileKey{690, 5334}),
-                 "https://example.invalid/dgm1/dgm1_32_690_5334_1_by.xyz");
+                 "https://example.invalid/dgm1/690_5334.xyz");
 }
 
 void testDefaultConfig()

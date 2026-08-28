@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <sstream>
@@ -24,6 +26,84 @@ std::string toLower(std::string value)
     std::transform(value.begin(), value.end(), value.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return value;
+}
+
+std::string escapeForSingleQuotedShell(const std::string& value)
+{
+    std::string escaped;
+    escaped.reserve(value.size() + 8);
+    for (char c : value) {
+        if (c == '\'') {
+            escaped += "'\"'\"'";
+        } else {
+            escaped += c;
+        }
+    }
+    return escaped;
+}
+
+std::string escapeForPowerShellSingleQuotedString(const std::string& value)
+{
+    std::string escaped;
+    escaped.reserve(value.size() + 8);
+    for (char c : value) {
+        if (c == '\'') {
+            escaped += "''";
+        } else {
+            escaped += c;
+        }
+    }
+    return escaped;
+}
+
+bool ensureExtractedTxtFile(const std::string& zipPath, std::string& txtPath, std::string* error)
+{
+    namespace fs = std::filesystem;
+
+    fs::path archivePath(zipPath);
+    fs::path extractedPath = archivePath;
+    extractedPath.replace_extension(".txt");
+    txtPath = extractedPath.string();
+
+    if (fs::exists(extractedPath)) {
+        return true;
+    }
+
+    std::error_code ec;
+    if (!extractedPath.parent_path().empty()) {
+        fs::create_directories(extractedPath.parent_path(), ec);
+        if (ec) {
+            setError(error, "cannot create cache directory for extracted tile: " +
+                                extractedPath.parent_path().string());
+            return false;
+        }
+    }
+
+    const std::string archive = escapeForPowerShellSingleQuotedString(archivePath.string());
+    const std::string output = escapeForPowerShellSingleQuotedString(extractedPath.string());
+    const std::string entryName = escapeForPowerShellSingleQuotedString(extractedPath.filename().string());
+
+#if defined(_WIN32)
+    const std::string command =
+        "powershell -NoProfile -NonInteractive -Command \"Add-Type -AssemblyName "
+        "System.IO.Compression.FileSystem; $archive='" +
+        archive + "'; $output='" + output + "'; $entryName='" + entryName +
+        "'; $zip=[System.IO.Compression.ZipFile]::OpenRead($archive); try { $entry=$zip.Entries | "
+        "Where-Object { $_.Name -ieq $entryName } | Select-Object -First 1; if ($null -eq $entry) "
+        "{ exit 2 }; [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $output, $false) } "
+        "finally { $zip.Dispose() }\"";
+#else
+    const std::string command = "unzip -p '" + escapeForSingleQuotedShell(archivePath.string()) +
+                                "' '" + escapeForSingleQuotedShell(extractedPath.filename().string()) +
+                                "' > '" + escapeForSingleQuotedShell(extractedPath.string()) + "'";
+#endif
+
+    if (std::system(command.c_str()) != 0 || !fs::exists(extractedPath)) {
+        setError(error, "cannot extract TXT file from ZIP archive: " + zipPath);
+        return false;
+    }
+
+    return true;
 }
 
 /// Smallest positive difference between consecutive sorted unique coordinates.
@@ -193,14 +273,23 @@ bool BavariaDgm1TileReader::readAsciiGrid(std::istream& stream, Utm32GridTile& t
 bool BavariaDgm1TileReader::readFile(const std::string& path, Utm32GridTile& tile,
                                      std::string* error)
 {
-    std::ifstream stream(path);
+    const std::size_t dot = path.find_last_of('.');
+    const std::string extension =
+        (dot == std::string::npos) ? std::string() : toLower(path.substr(dot));
+
+    std::string resolvedPath = path;
+    if (extension == ".zip") {
+        if (!ensureExtractedTxtFile(path, resolvedPath, error)) {
+            return false;
+        }
+    }
+
+    std::ifstream stream(resolvedPath);
     if (!stream) {
-        setError(error, "cannot open file: " + path);
+        setError(error, "cannot open file: " + resolvedPath);
         return false;
     }
 
-    const std::size_t dot = path.find_last_of('.');
-    const std::string extension = (dot == std::string::npos) ? std::string() : toLower(path.substr(dot));
     if (extension == ".asc" || extension == ".txt.asc") {
         return readAsciiGrid(stream, tile, error);
     }

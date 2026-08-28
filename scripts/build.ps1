@@ -21,16 +21,16 @@
     Build tree location. Defaults to <repo>/build/<Configuration>.
 
 .PARAMETER NoTests
-    Configure with GEOSOLAR_BUILD_TESTS=OFF, i.e. build the library only.
+    Configure with BUILD_GEOLIB_TESTS=OFF, i.e. build the library only.
 
 .PARAMETER Clean
     Delete the build tree before configuring.
 
 .EXAMPLE
-    ./scripts/win_build.ps1
+    ./scripts/build.ps1
 
 .EXAMPLE
-    ./scripts/win_build.ps1 -Configuration Release -Clean
+    ./scripts/build.ps1 -Configuration Release -Clean
 #>
 [CmdletBinding()]
 param(
@@ -70,7 +70,7 @@ if ($Generator) {
     $configureArgs += @('-G', $Generator)
 }
 if ($NoTests) {
-    $configureArgs += '-DGEOSOLAR_BUILD_TESTS=OFF'
+    $configureArgs += '-DBUILD_GEOLIB_TESTS=OFF'
 }
 
 Write-Host "Configuring ($Configuration) in $BuildDir" -ForegroundColor Cyan
