@@ -65,3 +65,9 @@ add_geolib_test(UsaUsgs3Dep1mHeightDataSourceTests
     geolib/data_sources/UsaUsgs3Dep1mHeightDataSourceTests.cpp)
 add_geolib_test(UsaUsgs3Dep1mTileDownloaderTests
     geolib/data_sources/UsaUsgs3Dep1mTileDownloaderTests.cpp)
+
+# Qt application tests. Only built if the SolarSim app library was configured
+# (i.e. Qt Widgets/Network were found by src/app/CMakeLists.txt).
+if(TARGET SolarSimAppLib)
+    add_subdirectory(app)
+endif()

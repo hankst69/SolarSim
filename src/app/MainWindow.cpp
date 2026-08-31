@@ -80,6 +80,7 @@ void MainWindow::buildUi()
     auto* layout = new QVBoxLayout(central);
 
     m_sceneView = new SceneViewWidget(central);
+    m_sceneView->setObjectName(QStringLiteral("sceneView"));
     layout->addWidget(m_sceneView, 1);
 
     // Time control: scroll through the day from sunrise to sunset.
@@ -88,6 +89,7 @@ void MainWindow::buildUi()
 
     auto* dateLayout = new QHBoxLayout();
     m_dateEdit = new QDateEdit(timeBox);
+    m_dateEdit->setObjectName(QStringLiteral("dateEdit"));
     m_dateEdit->setCalendarPopup(true);
     m_dateEdit->setDisplayFormat(QStringLiteral("yyyy-MM-dd"));
     dateLayout->addWidget(new QLabel(tr("Date:"), timeBox));
@@ -99,12 +101,14 @@ void MainWindow::buildUi()
     sliderGrid->addWidget(new QLabel(tr("Sunrise"), timeBox), 0, 0, Qt::AlignHCenter);
 
     m_timeSlider = new QSlider(Qt::Horizontal, timeBox);
+    m_timeSlider->setObjectName(QStringLiteral("timeSlider"));
     m_timeSlider->setTracking(true);
     sliderGrid->addWidget(m_timeSlider, 0, 1);
 
     sliderGrid->addWidget(new QLabel(tr("Sunset"), timeBox), 0, 2, Qt::AlignHCenter);
 
     m_sunriseTimeLabel = new QLabel(timeBox);
+    m_sunriseTimeLabel->setObjectName(QStringLiteral("sunriseTimeLabel"));
     m_sunriseTimeLabel->setAlignment(Qt::AlignHCenter);
     sliderGrid->addWidget(m_sunriseTimeLabel, 1, 0);
 
@@ -114,15 +118,19 @@ void MainWindow::buildUi()
     playLayout->addStretch(1);
 
     m_jumpToStartButton = new QPushButton(tr("|<"), timeBox);
+    m_jumpToStartButton->setObjectName(QStringLiteral("jumpToStartButton"));
     playLayout->addWidget(m_jumpToStartButton);
 
     m_playPauseButton = new QPushButton(tr("Play"), timeBox);
+    m_playPauseButton->setObjectName(QStringLiteral("playPauseButton"));
     playLayout->addWidget(m_playPauseButton);
 
     m_jumpToEndButton = new QPushButton(tr(">|"), timeBox);
+    m_jumpToEndButton->setObjectName(QStringLiteral("jumpToEndButton"));
     playLayout->addWidget(m_jumpToEndButton);
 
     m_timeLabel = new QLabel(timeBox);
+    m_timeLabel->setObjectName(QStringLiteral("timeLabel"));
     m_timeLabel->setMinimumWidth(120);
     m_timeLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
     playLayout->addWidget(m_timeLabel);
@@ -131,6 +139,7 @@ void MainWindow::buildUi()
     sliderGrid->addLayout(playLayout, 1, 1);
 
     m_sunsetTimeLabel = new QLabel(timeBox);
+    m_sunsetTimeLabel->setObjectName(QStringLiteral("sunsetTimeLabel"));
     m_sunsetTimeLabel->setAlignment(Qt::AlignHCenter);
     sliderGrid->addWidget(m_sunsetTimeLabel, 1, 2);
 
@@ -144,16 +153,19 @@ void MainWindow::buildUi()
     auto* cameraLayout = new QHBoxLayout(cameraBox);
 
     m_azimuthSpin = new QDoubleSpinBox(cameraBox);
+    m_azimuthSpin->setObjectName(QStringLiteral("azimuthSpin"));
     m_azimuthSpin->setRange(0.0, 360.0);
     m_azimuthSpin->setWrapping(true);
     m_azimuthSpin->setSuffix(QStringLiteral(" deg"));
 
     m_elevationSpin = new QDoubleSpinBox(cameraBox);
+    m_elevationSpin->setObjectName(QStringLiteral("elevationSpin"));
     m_elevationSpin->setRange(geo::CameraPosition::kMinElevationDeg,
                               geo::CameraPosition::kMaxElevationDeg);
     m_elevationSpin->setSuffix(QStringLiteral(" deg"));
 
     m_rangeSpin = new QDoubleSpinBox(cameraBox);
+    m_rangeSpin->setObjectName(QStringLiteral("rangeSpin"));
     m_rangeSpin->setRange(geo::CameraPosition::kMinRangeM, 20000.0);
     m_rangeSpin->setSingleStep(10.0);
     m_rangeSpin->setSuffix(QStringLiteral(" m"));
@@ -165,9 +177,11 @@ void MainWindow::buildUi()
     cameraLayout->addLayout(cameraForm);
 
     auto* resetButton = new QPushButton(tr("Reset camera"), cameraBox);
+    resetButton->setObjectName(QStringLiteral("resetCameraButton"));
     cameraLayout->addWidget(resetButton);
 
     m_sunLabel = new QLabel(cameraBox);
+    m_sunLabel->setObjectName(QStringLiteral("sunLabel"));
     cameraLayout->addWidget(m_sunLabel, 1);
 
     layout->addWidget(cameraBox);

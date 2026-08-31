@@ -11,6 +11,10 @@ option(BUILD_SOLARSIM_APP    "Build the SolarSim Qt GUI application" ON)
 
 add_subdirectory(src/geolib)
 
+if(BUILD_SOLARSIM_APP)
+    add_subdirectory(src/app)
+endif()
+
 if(BUILD_GEOLIB_TESTS)
     enable_testing()
     add_subdirectory(tests)
@@ -18,9 +22,5 @@ endif()
 
 if(BUILD_GEOLIB_EXAMPLES)
     add_subdirectory(src/examples)
-endif()
-
-if(BUILD_SOLARSIM_APP)
-    add_subdirectory(src/app)
 endif()
 
