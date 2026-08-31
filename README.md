@@ -65,6 +65,54 @@ Pass `-h` / `--help` to either script for the full option list.
 
 Set `-DBUILD_GEOLIB_TESTS=OFF` to skip them.
 
+## WebAssembly build
+
+`geolib` and `app` can also be built as WebAssembly with
+[Emscripten](https://emscripten.org/). Install the Emscripten SDK and
+activate it (source `emsdk_env.sh` on Linux, dot-source `emsdk_env.ps1` on
+Windows) so `emcc`/`emcmake`/`emmake` are on `PATH`; the tests additionally
+need [Node.js](https://nodejs.org/) on `PATH` to execute the compiled `.js`
+suites through CTest.
+
+```
+./scripts/build-wasm.sh                          # Release build in build/wasm-Release
+./scripts/build-wasm.sh -c Debug                 # Debug build in build/wasm-Debug
+./scripts/build-wasm.sh --clean                  # rebuild from scratch
+./scripts/build-wasm.sh --no-tests               # library only
+./scripts/build-wasm.sh --webgpu                 # enable the WebGPU renderer
+```
+
+```
+./scripts/build-wasm.ps1                         # Release build in build/wasm-Release
+./scripts/build-wasm.ps1 -Configuration Debug     # Debug build in build/wasm-Debug
+./scripts/build-wasm.ps1 -Clean                  # rebuild from scratch
+./scripts/build-wasm.ps1 -NoTests                # library only
+./scripts/build-wasm.ps1 -WebGpu                 # enable the WebGPU renderer
+```
+
+`scripts/test-wasm.sh` / `scripts/test-wasm.ps1` build and run the unit test
+suites the same way, via `ctest` with each compiled `.js` suite executed
+through `node`:
+
+```
+./scripts/test-wasm.sh                           # build + run all tests
+./scripts/test-wasm.sh -f UsaUsgs3Dep1m           # run a subset (ctest -R)
+./scripts/test-wasm.sh --skip-build               # reuse the existing build tree
+```
+
+```
+./scripts/test-wasm.ps1                          # build + run all tests
+./scripts/test-wasm.ps1 -Filter UsaUsgs3Dep1m     # run a subset (ctest -R)
+./scripts/test-wasm.ps1 -SkipBuild                # reuse the existing build tree
+```
+
+Building the `app` target for WebAssembly additionally requires a WebAssembly
+build of Qt (Qt for WebAssembly, e.g. installed via `aqtinstall`/`aqt` and
+made discoverable through `CMAKE_PREFIX_PATH`/`Qt6_DIR`); if it is not found
+`app` is skipped the same way it is for a native build without Qt, and only
+`geolib` (and its tests) are built. See
+[Hardware accelerated rendering](#hardware-accelerated-rendering-webgpu-optional)
+below for enabling the WebGPU renderer in the WebAssembly build of `app`.
 
 ## geolib
 
