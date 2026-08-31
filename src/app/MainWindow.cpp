@@ -19,6 +19,7 @@
 #include <QPushButton>
 #include <QSlider>
 #include <QStatusBar>
+#include <QTimer>
 #include <QVBoxLayout>
 
 #include <cmath>
@@ -37,6 +38,13 @@ constexpr double kSceneGridSpacingM = 10.0;
 
 /// Resolution of the time slider: one step per minute.
 constexpr int kSliderStepsPerMinute = 1;
+
+/// Interval between playback ticks in milliseconds.
+constexpr int kPlaybackTickIntervalMs = 40;
+
+/// Total wall-clock duration of a full sunrise-to-sunset playback in
+/// milliseconds (about one minute).
+constexpr double kPlaybackDurationMs = 60000.0;
 
 double minutesOfDay(const geo::DateTimeUtc& utc)
 {
@@ -98,10 +106,27 @@ void MainWindow::buildUi()
     m_sunriseTimeLabel->setAlignment(Qt::AlignHCenter);
     sliderGrid->addWidget(m_sunriseTimeLabel, 1, 0);
 
+    // Playback controls: jump to sunrise, play/pause, jump to sunset, with
+    // the current time shown tight next to the play/pause button.
+    auto* playLayout = new QHBoxLayout();
+    playLayout->addStretch(1);
+
+    m_jumpToStartButton = new QPushButton(tr("|<"), timeBox);
+    playLayout->addWidget(m_jumpToStartButton);
+
+    m_playPauseButton = new QPushButton(tr("Play"), timeBox);
+    playLayout->addWidget(m_playPauseButton);
+
+    m_jumpToEndButton = new QPushButton(tr(">|"), timeBox);
+    playLayout->addWidget(m_jumpToEndButton);
+
     m_timeLabel = new QLabel(timeBox);
     m_timeLabel->setMinimumWidth(120);
-    m_timeLabel->setAlignment(Qt::AlignHCenter);
-    sliderGrid->addWidget(m_timeLabel, 1, 1, Qt::AlignHCenter);
+    m_timeLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+    playLayout->addWidget(m_timeLabel);
+
+    playLayout->addStretch(1);
+    sliderGrid->addLayout(playLayout, 1, 1);
 
     m_sunsetTimeLabel = new QLabel(timeBox);
     m_sunsetTimeLabel->setAlignment(Qt::AlignHCenter);
@@ -158,6 +183,13 @@ void MainWindow::buildUi()
             &MainWindow::onCameraSpinChanged);
     connect(resetButton, &QPushButton::clicked, this, &MainWindow::onResetCamera);
     connect(m_sceneView, &SceneView::cameraChanged, this, &MainWindow::onCameraChangedByView);
+
+    m_playTimer = new QTimer(this);
+    m_playTimer->setInterval(kPlaybackTickIntervalMs);
+    connect(m_playTimer, &QTimer::timeout, this, &MainWindow::onPlaybackTick);
+    connect(m_playPauseButton, &QPushButton::clicked, this, &MainWindow::onPlayPauseClicked);
+    connect(m_jumpToStartButton, &QPushButton::clicked, this, &MainWindow::onJumpToStart);
+    connect(m_jumpToEndButton, &QPushButton::clicked, this, &MainWindow::onJumpToEnd);
 }
 
 void MainWindow::rebuildScene()
@@ -189,6 +221,8 @@ void MainWindow::rebuildSunPath()
     if (!m_terrain) {
         return;
     }
+
+    setPlaying(false);
 
     const QDate date = m_dateEdit->date();
     m_sunPath = std::make_unique<geo::SunPath>(m_terrain->dome(), date.year(), date.month(),
@@ -227,6 +261,10 @@ void MainWindow::rebuildSunPath()
     m_timeSlider->setRange(0, std::max(1, steps));
     m_timeSlider->setValue(m_timeSlider->maximum() / 2); // start at solar noon
     m_updatingControls = wasUpdating;
+
+    // Playback runs from sunrise to sunset in roughly kPlaybackDurationMs.
+    const double ticks = kPlaybackDurationMs / kPlaybackTickIntervalMs;
+    m_playStepPerTick = std::max(1.0, m_timeSlider->maximum() / ticks);
 
     applyTime(m_timeSlider->value());
 }
@@ -328,4 +366,52 @@ void MainWindow::onResetCamera()
 
     m_sceneView->setCamera(camera);
     updateCameraControls();
+}
+
+void MainWindow::setPlaying(bool playing)
+{
+    if (m_isPlaying == playing) {
+        return;
+    }
+
+    m_isPlaying = playing;
+    if (m_isPlaying) {
+        // Restart from the beginning if playback had already reached the end.
+        if (m_timeSlider->value() >= m_timeSlider->maximum()) {
+            m_timeSlider->setValue(m_timeSlider->minimum());
+        }
+        m_playPauseButton->setText(tr("Pause"));
+        m_playTimer->start();
+    } else {
+        m_playTimer->stop();
+        m_playPauseButton->setText(tr("Play"));
+    }
+}
+
+void MainWindow::onPlayPauseClicked()
+{
+    setPlaying(!m_isPlaying);
+}
+
+void MainWindow::onJumpToStart()
+{
+    setPlaying(false);
+    m_timeSlider->setValue(m_timeSlider->minimum());
+}
+
+void MainWindow::onJumpToEnd()
+{
+    setPlaying(false);
+    m_timeSlider->setValue(m_timeSlider->maximum());
+}
+
+void MainWindow::onPlaybackTick()
+{
+    const int next = m_timeSlider->value() + static_cast<int>(std::lround(m_playStepPerTick));
+    if (next >= m_timeSlider->maximum()) {
+        m_timeSlider->setValue(m_timeSlider->maximum());
+        setPlaying(false);
+        return;
+    }
+    m_timeSlider->setValue(next);
 }

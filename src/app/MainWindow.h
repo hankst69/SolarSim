@@ -13,7 +13,9 @@ class SceneView;
 class QDateEdit;
 class QDoubleSpinBox;
 class QLabel;
+class QPushButton;
 class QSlider;
+class QTimer;
 
 /// Main window of the SolarSim application: a terrain scene lit by the
 /// simulated sun, with a time slider from sunrise to sunset and interactive
@@ -31,6 +33,10 @@ private slots:
     void onCameraSpinChanged();
     void onCameraChangedByView();
     void onResetCamera();
+    void onPlayPauseClicked();
+    void onJumpToStart();
+    void onJumpToEnd();
+    void onPlaybackTick();
 
 private:
     void buildUi();
@@ -40,6 +46,7 @@ private:
     void updateCameraControls();
     void updateStatus(const geo::DateTimeUtc& utc);
     geo::DateTimeUtc timeForSlider(int value) const;
+    void setPlaying(bool playing);
 
     geo::GeoLocation m_location;
     std::shared_ptr<geo::TerrainModel> m_terrain;
@@ -55,9 +62,15 @@ private:
     QLabel* m_sunriseTimeLabel{nullptr};
     QLabel* m_sunsetTimeLabel{nullptr};
     QLabel* m_sunLabel{nullptr};
+    QPushButton* m_jumpToStartButton{nullptr};
+    QPushButton* m_playPauseButton{nullptr};
+    QPushButton* m_jumpToEndButton{nullptr};
+    QTimer* m_playTimer{nullptr};
+    double m_playStepPerTick{1.0};
     QDoubleSpinBox* m_azimuthSpin{nullptr};
     QDoubleSpinBox* m_elevationSpin{nullptr};
     QDoubleSpinBox* m_rangeSpin{nullptr};
 
     bool m_updatingControls{false};
+    bool m_isPlaying{false};
 };
