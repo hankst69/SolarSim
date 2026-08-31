@@ -1,7 +1,9 @@
 #include "MainWindow.h"
 
 #include "HeightDataSources.h"
+#if !defined(SOLARSIM_USE_OPENGL)
 #include "SceneView.h"
+#endif
 
 #include "geolib/CameraPosition.h"
 #include "geolib/GridHeightDataSource.h"
@@ -77,7 +79,7 @@ void MainWindow::buildUi()
     auto* central = new QWidget(this);
     auto* layout = new QVBoxLayout(central);
 
-    m_sceneView = new SceneView(central);
+    m_sceneView = new SceneViewWidget(central);
     layout->addWidget(m_sceneView, 1);
 
     // Time control: scroll through the day from sunrise to sunset.
@@ -182,7 +184,7 @@ void MainWindow::buildUi()
     connect(m_rangeSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
             &MainWindow::onCameraSpinChanged);
     connect(resetButton, &QPushButton::clicked, this, &MainWindow::onResetCamera);
-    connect(m_sceneView, &SceneView::cameraChanged, this, &MainWindow::onCameraChangedByView);
+    connect(m_sceneView, &SceneViewWidget::cameraChanged, this, &MainWindow::onCameraChangedByView);
 
     m_playTimer = new QTimer(this);
     m_playTimer->setInterval(kPlaybackTickIntervalMs);

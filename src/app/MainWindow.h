@@ -9,7 +9,14 @@
 
 #include <memory>
 
+#if defined(SOLARSIM_USE_OPENGL)
+#include "GLSceneView.h"
+using SceneViewWidget = GLSceneView;
+#else
 class SceneView;
+using SceneViewWidget = SceneView;
+#endif
+
 class QDateEdit;
 class QDoubleSpinBox;
 class QLabel;
@@ -55,7 +62,7 @@ private:
     double m_dayStartMinutes{0.0};
     double m_dayEndMinutes{24.0 * 60.0};
 
-    SceneView* m_sceneView{nullptr};
+    SceneViewWidget* m_sceneView{nullptr};
     QDateEdit* m_dateEdit{nullptr};
     QSlider* m_timeSlider{nullptr};
     QLabel* m_timeLabel{nullptr};

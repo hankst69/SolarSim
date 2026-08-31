@@ -11,21 +11,38 @@ endif()
 
 set(CMAKE_AUTOMOC ON)
 
-# Optional hardware accelerated rendering backend via WebGPU. Off by default
-# because it needs a native WebGPU implementation (wgpu-native or Dawn) to be
-# available/findable, or Emscripten as the toolchain for a WebAssembly build,
-# where the browser's own WebGPU implementation is used automatically.
+# Optional hardware accelerated rendering backends. Off by default; the
+# software rasterizer (SceneView) is used unless one of these is enabled.
+# Only one can be active at a time.
 option(SOLARSIM_USE_WEBGPU "Render the scene with hardware accelerated WebGPU instead of the software rasterizer" OFF)
+option(SOLARSIM_USE_OPENGL "Render the scene with hardware accelerated OpenGL (Qt's QOpenGLWidget) instead of the software rasterizer" OFF)
+
+if(SOLARSIM_USE_WEBGPU AND SOLARSIM_USE_OPENGL)
+    message(FATAL_ERROR "SOLARSIM_USE_WEBGPU and SOLARSIM_USE_OPENGL are mutually exclusive")
+endif()
 
 add_executable(SolarSim WIN32
     main.cpp
     MainWindow.cpp
     MainWindow.h
-    SceneView.cpp
-    SceneView.h
     HeightDataSources.cpp
     HeightDataSources.h
 )
+
+if(SOLARSIM_USE_OPENGL)
+    target_sources(SolarSim PRIVATE GLSceneView.cpp GLSceneView.h)
+    target_compile_definitions(SolarSim PRIVATE SOLARSIM_USE_OPENGL)
+
+    if(Qt6_FOUND)
+        find_package(Qt6 COMPONENTS OpenGLWidgets REQUIRED)
+        target_link_libraries(SolarSim PRIVATE Qt6::OpenGLWidgets)
+    else()
+        find_package(Qt5 5.12 COMPONENTS OpenGL REQUIRED)
+        target_link_libraries(SolarSim PRIVATE Qt5::OpenGL)
+    endif()
+else()
+    target_sources(SolarSim PRIVATE SceneView.cpp SceneView.h)
+endif()
 
 if(SOLARSIM_USE_WEBGPU)
     target_sources(SolarSim PRIVATE GpuSceneRenderer.cpp GpuSceneRenderer.h)
