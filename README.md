@@ -99,6 +99,37 @@ the current date:
   left mouse button to rotate, use the mouse wheel to zoom, or enter azimuth,
   elevation and distance directly.
 
+### Hardware accelerated rendering (WebGPU, optional)
+
+By default the scene is rendered with a small software rasterizer
+(`SceneView`'s painter's algorithm), which needs no extra dependencies. For
+larger terrains an optional GPU backend (`GpuSceneRenderer`) is available,
+built on the [WebGPU](https://www.w3.org/TR/webgpu/) API via its C header
+`webgpu.h`. Because WebGPU itself is implemented on top of Vulkan/Metal/D3D12
+on desktop and natively by the browser on the web, the same rendering code
+works unchanged for both a native build and a WebAssembly build (via
+Emscripten), without depending on OS specific graphics APIs.
+
+Enable it with:
+
+```
+cmake -S . -B build -DSOLARSIM_USE_WEBGPU=ON
+```
+
+- **Native desktop**: requires a native WebGPU implementation such as
+  [wgpu-native](https://github.com/gfx-rs/wgpu-native) or
+  [Dawn](https://dawn.googlesource.com/dawn) installed/built with CMake
+  package support, discoverable via `find_package(webgpu)` (point
+  `CMAKE_PREFIX_PATH` at its install directory). Windows (HWND) surface
+  creation is implemented; Linux/macOS surface creation is a follow-up.
+- **WebAssembly**: configure with the Emscripten toolchain
+  (`emcmake cmake -S . -B build-wasm -DSOLARSIM_USE_WEBGPU=ON`) and build with
+  `emmake cmake --build build-wasm`; Emscripten's built-in WebGPU support is
+  used automatically, rendering into the page's `#canvas` element.
+
+When `SOLARSIM_USE_WEBGPU` is `OFF` (the default), none of this code is
+compiled and the application behaves exactly as before.
+
 Planned additions:
 
 - Input of the location (latitude/longitude or map picking).

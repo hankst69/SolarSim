@@ -13,11 +13,19 @@
 
 #include <memory>
 
-/// Software rendered view of the terrain scene.
+#if defined(SOLARSIM_USE_WEBGPU)
+#include "GpuSceneRenderer.h"
+#endif
+
+/// View of the terrain scene.
 ///
-/// The widget projects the triangle mesh of a geo::TerrainModel with a simple
-/// painter's algorithm. Shading combines a weak ambient/diffuse base light with
-/// the directional geo::SunLight of the current date/time, including terrain
+/// By default the widget projects the triangle mesh of a geo::TerrainModel
+/// with a simple software painter's algorithm. When built with
+/// SOLARSIM_USE_WEBGPU, rendering is instead hardware accelerated through the
+/// WebGPU API (GpuSceneRenderer), which works identically on desktop (native
+/// WebGPU via wgpu-native/Dawn) and in a WebAssembly build running in a
+/// browser. Shading combines a weak ambient/diffuse base light with the
+/// directional geo::SunLight of the current date/time, including terrain
 /// cast shadows.
 class SceneView : public QWidget {
     Q_OBJECT
@@ -36,6 +44,7 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
@@ -65,4 +74,9 @@ private:
     geo::Vector3 m_target;
 
     QPoint m_lastMousePos;
+
+#if defined(SOLARSIM_USE_WEBGPU)
+    std::unique_ptr<GpuSceneRenderer> m_gpuRenderer;
+    bool m_gpuInitialized{false};
+#endif
 };

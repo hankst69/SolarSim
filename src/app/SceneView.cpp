@@ -5,6 +5,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPolygonF>
+#include <QResizeEvent>
 #include <QWheelEvent>
 #include <QtGlobal>
 
@@ -41,12 +42,45 @@ SceneView::SceneView(QWidget* parent)
     setMinimumSize(480, 360);
     setMouseTracking(false);
     setFocusPolicy(Qt::StrongFocus);
+
+#if defined(SOLARSIM_USE_WEBGPU)
+    // A real, non-alien native window handle is required to create a WebGPU
+    // surface from it.
+    setAttribute(Qt::WA_NativeWindow);
+    setAttribute(Qt::WA_PaintOnScreen);
+    setAttribute(Qt::WA_NoSystemBackground);
+    m_gpuRenderer = std::make_unique<GpuSceneRenderer>();
+#endif
+}
+
+void SceneView::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+
+#if defined(SOLARSIM_USE_WEBGPU)
+    if (m_gpuInitialized) {
+        m_gpuRenderer->resize(static_cast<std::uint32_t>(width()),
+                              static_cast<std::uint32_t>(height()));
+    }
+#endif
 }
 
 void SceneView::setTerrain(std::shared_ptr<const geo::TerrainModel> terrain)
 {
     m_terrain = std::move(terrain);
     rebuildLight();
+
+#if defined(SOLARSIM_USE_WEBGPU)
+    if (!m_gpuInitialized && m_gpuRenderer) {
+        m_gpuInitialized = m_gpuRenderer->initialize(reinterpret_cast<void*>(winId()),
+                                                     static_cast<std::uint32_t>(width()),
+                                                     static_cast<std::uint32_t>(height()));
+    }
+    if (m_gpuInitialized) {
+        m_gpuRenderer->setTerrain(m_terrain);
+    }
+#endif
+
     update();
 }
 
@@ -54,6 +88,13 @@ void SceneView::setDateTime(const geo::DateTimeUtc& utc)
 {
     m_utc = utc;
     rebuildLight();
+
+#if defined(SOLARSIM_USE_WEBGPU)
+    if (m_gpuInitialized) {
+        m_gpuRenderer->setDateTime(utc);
+    }
+#endif
+
     update();
 }
 
@@ -61,6 +102,13 @@ void SceneView::setCamera(const geo::CameraPosition& camera)
 {
     m_camera = std::make_unique<geo::CameraPosition>(camera);
     updateViewFrame();
+
+#if defined(SOLARSIM_USE_WEBGPU)
+    if (m_gpuInitialized) {
+        m_gpuRenderer->setCamera(camera);
+    }
+#endif
+
     update();
 }
 
@@ -181,6 +229,13 @@ void SceneView::collectFaces(QVector<Face>& faces) const
 
 void SceneView::paintEvent(QPaintEvent* /*event*/)
 {
+#if defined(SOLARSIM_USE_WEBGPU)
+    if (m_gpuInitialized) {
+        m_gpuRenderer->renderFrame();
+        return;
+    }
+#endif
+
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, false);
 
