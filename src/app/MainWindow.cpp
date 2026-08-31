@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 
+#include "HeightDataSources.h"
 #include "SceneView.h"
 
 #include "geolib/CameraPosition.h"
@@ -142,12 +143,14 @@ void MainWindow::buildUi()
 
 void MainWindow::rebuildScene()
 {
-    // Make sure at least the flat fallback source is available, so the app also
-    // runs without any downloaded elevation tiles.
+    // Register the concrete height data sources (Bavaria DGM1, World
+    // Copernicus DEM GLO-30) on top of the flat fallback, so the app prefers
+    // real elevation data where available.
     geo::HeightDataSourceRegistry& registry = geo::HeightDataSourceRegistry::instance();
     if (registry.sources().empty()) {
         registry.addSource(std::make_shared<geo::FlatHeightDataSource>());
     }
+    registerHeightDataSources();
 
     const geo::HorizonDome dome = geo::HorizonDome::fromHeightDataSourceRegistry(m_location);
 
