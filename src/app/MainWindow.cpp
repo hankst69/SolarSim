@@ -12,6 +12,7 @@
 #include <QDateEdit>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
+#include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -73,23 +74,41 @@ void MainWindow::buildUi()
 
     // Time control: scroll through the day from sunrise to sunset.
     auto* timeBox = new QGroupBox(tr("Date and time of day"), central);
-    auto* timeLayout = new QHBoxLayout(timeBox);
+    auto* timeLayout = new QVBoxLayout(timeBox);
 
+    auto* dateLayout = new QHBoxLayout();
     m_dateEdit = new QDateEdit(timeBox);
     m_dateEdit->setCalendarPopup(true);
     m_dateEdit->setDisplayFormat(QStringLiteral("yyyy-MM-dd"));
-    timeLayout->addWidget(new QLabel(tr("Date:"), timeBox));
-    timeLayout->addWidget(m_dateEdit);
+    dateLayout->addWidget(new QLabel(tr("Date:"), timeBox));
+    dateLayout->addWidget(m_dateEdit);
+    dateLayout->addStretch(1);
+    timeLayout->addLayout(dateLayout);
+
+    auto* sliderGrid = new QGridLayout();
+    sliderGrid->addWidget(new QLabel(tr("Sunrise"), timeBox), 0, 0, Qt::AlignHCenter);
 
     m_timeSlider = new QSlider(Qt::Horizontal, timeBox);
     m_timeSlider->setTracking(true);
-    timeLayout->addWidget(new QLabel(tr("Sunrise"), timeBox));
-    timeLayout->addWidget(m_timeSlider, 1);
-    timeLayout->addWidget(new QLabel(tr("Sunset"), timeBox));
+    sliderGrid->addWidget(m_timeSlider, 0, 1);
+
+    sliderGrid->addWidget(new QLabel(tr("Sunset"), timeBox), 0, 2, Qt::AlignHCenter);
+
+    m_sunriseTimeLabel = new QLabel(timeBox);
+    m_sunriseTimeLabel->setAlignment(Qt::AlignHCenter);
+    sliderGrid->addWidget(m_sunriseTimeLabel, 1, 0);
 
     m_timeLabel = new QLabel(timeBox);
     m_timeLabel->setMinimumWidth(120);
-    timeLayout->addWidget(m_timeLabel);
+    m_timeLabel->setAlignment(Qt::AlignHCenter);
+    sliderGrid->addWidget(m_timeLabel, 1, 1, Qt::AlignHCenter);
+
+    m_sunsetTimeLabel = new QLabel(timeBox);
+    m_sunsetTimeLabel->setAlignment(Qt::AlignHCenter);
+    sliderGrid->addWidget(m_sunsetTimeLabel, 1, 2);
+
+    sliderGrid->setColumnStretch(1, 1);
+    timeLayout->addLayout(sliderGrid);
 
     layout->addWidget(timeBox);
 
@@ -182,9 +201,19 @@ void MainWindow::rebuildSunPath()
     if (m_sunPath->sunrise(rise) && m_sunPath->sunset(set)) {
         m_dayStartMinutes = minutesOfDay(rise);
         m_dayEndMinutes = minutesOfDay(set);
+
+        m_sunriseTimeLabel->setText(QStringLiteral("%1:%2 UTC")
+                                        .arg(rise.hour, 2, 10, QLatin1Char('0'))
+                                        .arg(rise.minute, 2, 10, QLatin1Char('0')));
+        m_sunsetTimeLabel->setText(QStringLiteral("%1:%2 UTC")
+                                       .arg(set.hour, 2, 10, QLatin1Char('0'))
+                                       .arg(set.minute, 2, 10, QLatin1Char('0')));
     } else {
         m_dayStartMinutes = 0.0;
         m_dayEndMinutes = 24.0 * 60.0;
+
+        m_sunriseTimeLabel->setText(tr("--:--"));
+        m_sunsetTimeLabel->setText(tr("--:--"));
     }
     if (m_dayEndMinutes <= m_dayStartMinutes) {
         m_dayEndMinutes = m_dayStartMinutes + 1.0;

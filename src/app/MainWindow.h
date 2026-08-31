@@ -52,6 +52,8 @@ private:
     QDateEdit* m_dateEdit{nullptr};
     QSlider* m_timeSlider{nullptr};
     QLabel* m_timeLabel{nullptr};
+    QLabel* m_sunriseTimeLabel{nullptr};
+    QLabel* m_sunsetTimeLabel{nullptr};
     QLabel* m_sunLabel{nullptr};
     QDoubleSpinBox* m_azimuthSpin{nullptr};
     QDoubleSpinBox* m_elevationSpin{nullptr};
