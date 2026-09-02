@@ -1,21 +1,49 @@
 ﻿{
   "configurations": [
     {
-      "name": "x64-Debug",
+      "name": "VS-x64-Debug",
       "generator": "Visual Studio 17 2022 Win64",
-      "configurationType": "Debug",
       "inheritEnvironments": [ "msvc_x64_x64" ],
-      "buildRoot": "${projectDir}\\out\\build_vsdbg\\${name}",
+      "configurationType": "Debug",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "BUILD_SOLARSIM_APP",
+          "value": "true",
+          "type": "BOOL"
+        },
+        {
+          "name": "BUILD_GEOLIB_EXAMPLES",
+          "value": "true",
+          "type": "BOOL"
+        },
+        {
+          "name": "BUILD_GEOLIB_TESTS",
+          "value": "false",
+          "type": "BOOL"
+        }
+      ]
+    },
+    {
+      "name": "msvc-x64-Debug",
+      "generator": "Ninja",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "configurationType": "Debug",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
       "ctestCommandArgs": ""
     },
     {
-      "name": "x64-Release",
+      "name": "msvc-x64-Release",
       "generator": "Ninja",
-      "configurationType": "RelWithDebInfo",
       "inheritEnvironments": [ "msvc_x64_x64" ],
+      "configurationType": "RelWithDebInfo",
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "",
@@ -25,13 +53,13 @@
     {
       "name": "Mingw64-Release",
       "generator": "Ninja",
+      "inheritEnvironments": [ "mingw_64" ],
       "configurationType": "RelWithDebInfo",
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
-      "inheritEnvironments": [ "mingw_64" ],
       "environments": [
         {
           "MINGW64_ROOT": "C:/msys64/mingw64",
