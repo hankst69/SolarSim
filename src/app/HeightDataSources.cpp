@@ -71,7 +71,21 @@ std::string cacheDirectoryFor(const std::string& subDirectory)
 {
     const QString base =
         QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    return QDir(base).filePath(QString::fromStdString(subDirectory)).toStdString();
+    //return QDir(base).filePath(QString::fromStdString(subDirectory)).toStdString();
+    return QDir(base + "/../").filePath(QString(subDirectory.c_str())).toStdString();
+
+    // attention:
+    // QString::fromStdString() works in tests and Exampke but not in actual Qt Application
+    // for now we use QString(stdstring.c_str()) instead
+    auto dir = QDir(base + "/../");
+    auto relpath = QString(subDirectory.c_str());
+    auto fullpath = dir.filePath(relpath);
+    //https://stackoverflow.com/questions/4214369/how-to-convert-qstring-to-stdstring
+    auto std_text = fullpath.toStdString();
+    auto utf8_text = fullpath.toUtf8().constData();
+    auto current_locale_text = fullpath.toLocal8Bit().constData();
+    auto stdpath = std::string(current_locale_text);
+    return stdpath;
 }
 
 } // namespace

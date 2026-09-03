@@ -214,10 +214,10 @@ void MainWindow::rebuildScene()
     // Copernicus DEM GLO-30) on top of the flat fallback, so the app prefers
     // real elevation data where available.
     geo::HeightDataSourceRegistry& registry = geo::HeightDataSourceRegistry::instance();
+    registerHeightDataSources();
     if (registry.sources().empty()) {
         registry.addSource(std::make_shared<geo::FlatHeightDataSource>());
     }
-    registerHeightDataSources();
 
     const geo::HorizonDome dome = geo::HorizonDome::fromHeightDataSourceRegistry(m_location);
 

@@ -84,4 +84,4 @@ endif()
 target_include_directories(SolarSimAppLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(SolarSim WIN32 main.cpp)
-target_link_libraries(SolarSim PRIVATE SolarSimAppLib)
+target_link_libraries(SolarSim PRIVATE SolarSimAppLib "/NODEFAULTLIB:MSVCRT" "/NODEFAULTLIB:MSVCRTD")

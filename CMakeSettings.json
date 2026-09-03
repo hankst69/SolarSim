@@ -25,6 +25,44 @@
           "name": "BUILD_GEOLIB_TESTS",
           "value": "false",
           "type": "BOOL"
+        },
+        {
+          "name": "SOLARSIM_USE_OPENGL",
+          "value": "True",
+          "type": "BOOL"
+        }
+      ]
+    },
+    {
+      "name": "VS-x64-Release",
+      "generator": "Visual Studio 17 2022 Win64",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "configurationType": "RelWithDebInfo",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "BUILD_SOLARSIM_APP",
+          "value": "true",
+          "type": "BOOL"
+        },
+        {
+          "name": "BUILD_GEOLIB_EXAMPLES",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "BUILD_GEOLIB_TESTS",
+          "value": "false",
+          "type": "BOOL"
+        },
+        {
+          "name": "SOLARSIM_USE_WEBGPU",
+          "value": "True",
+          "type": "BOOL"
         }
       ]
     },
