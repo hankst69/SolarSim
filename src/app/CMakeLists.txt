@@ -84,4 +84,12 @@ endif()
 target_include_directories(SolarSimAppLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(SolarSim WIN32 main.cpp)
-target_link_libraries(SolarSim PRIVATE SolarSimAppLib "/NODEFAULTLIB:MSVCRT" "/NODEFAULTLIB:MSVCRTD")
+
+# https://runebook.dev/en/docs/cmake/command/if
+# https://stackoverflow.com/questions/65599308/detect-build-type-debug-release-in-visual-studio-when-using-cmake
+#if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+#  target_link_libraries(SolarSim PRIVATE SolarSimAppLib "/NODEFAULTLIB:MSVCRT" "/NODEFAULTLIB:MSVCRTD")
+#else()
+#  target_link_libraries(SolarSim PRIVATE SolarSimAppLib)
+#endif()
+target_link_libraries(SolarSim PRIVATE SolarSimAppLib)

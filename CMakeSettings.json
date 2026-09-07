@@ -61,6 +61,11 @@
         },
         {
           "name": "SOLARSIM_USE_WEBGPU",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "SOLARSIM_USE_OPENGL",
           "value": "True",
           "type": "BOOL"
         }
