@@ -20,6 +20,7 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QProgressDialog>
 #include <QPushButton>
 #include <QSlider>
 #include <QStatusBar>
@@ -253,6 +254,13 @@ void MainWindow::buildUi()
 
 void MainWindow::rebuildScene()
 {
+    QProgressDialog loadingProgress(tr("Downloading terrain tiles..."), QString(), 0, 0, this);
+    loadingProgress.setWindowModality(Qt::WindowModal);
+    loadingProgress.setCancelButton(nullptr);
+    loadingProgress.setMinimumDuration(0);
+    loadingProgress.setWindowTitle(tr("Loading terrain"));
+    loadingProgress.show();
+
     const geo::HorizonDome dome = geo::HorizonDome::fromHeightDataSourceRegistry(m_location);
 
     geo::TerrainModel::Config config;
@@ -264,6 +272,8 @@ void MainWindow::rebuildScene()
         dome, m_geo_data_sources->heightDataSources().selectSource(m_location), config);
 
     m_sceneView->setTerrain(m_terrain);
+
+    loadingProgress.close();
 }
 
 void MainWindow::rebuildSunPath()
