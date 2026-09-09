@@ -41,7 +41,7 @@ std::vector<HeightDataSourcePtr> HeightDataSourceRegistry::sourcesFor(double lat
     }
     std::stable_sort(matches.begin(), matches.end(),
                      [](const HeightDataSourcePtr& a, const HeightDataSourcePtr& b) {
-                         return a->resolutionM() < b->resolutionM();
+                         return a->resolution() < b->resolution();
                      });
     return matches;
 }

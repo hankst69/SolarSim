@@ -22,7 +22,7 @@ public:
 
     std::string name() const override { return m_name; }
     GeoBounds coverage() const override { return m_bounds; }
-    double resolutionM() const override { return m_resolution; }
+    double resolution() const override { return m_resolution; }
 
     bool sampleHeight(double latitudeDeg, double longitudeDeg, double& heightM) const override
     {
@@ -100,7 +100,7 @@ void testGridSourceInterpolation()
 
     CHECK_EQ_INT(grid.columns(), 3);
     CHECK_EQ_INT(grid.rows(), 3);
-    CHECK_NEAR(grid.resolutionM(), 1.0, 1e-12);
+    CHECK_NEAR(grid.resolution(), 1.0, 1e-12);
 }
 
 void testGridSourceNoData()
@@ -157,16 +157,16 @@ void testRegistrySelectsFinestResolution()
     const auto matches = registry.sourcesFor(48.1372, 11.5756);
     CHECK_EQ_INT(static_cast<long long>(matches.size()), 3);
     if (matches.size() == 3) {
-        CHECK_NEAR(matches[0]->resolutionM(), 1.0, 1e-12);
-        CHECK_NEAR(matches[1]->resolutionM(), 10.0, 1e-12);
-        CHECK_NEAR(matches[2]->resolutionM(), 1000.0, 1e-12);
+        CHECK_NEAR(matches[0]->resolution(), 1.0, 1e-12);
+        CHECK_NEAR(matches[1]->resolution(), 10.0, 1e-12);
+        CHECK_NEAR(matches[2]->resolution(), 1000.0, 1e-12);
     }
 
     // Outside Bavaria only the world wide fallback remains.
     const auto fallback = registry.selectSource(52.52, 13.405);
     CHECK_TRUE(fallback != nullptr);
     if (fallback) {
-        CHECK_NEAR(fallback->resolutionM(), 1000.0, 1e-12);
+        CHECK_NEAR(fallback->resolution(), 1000.0, 1e-12);
     }
     CHECK_EQ_INT(static_cast<long long>(registry.sourcesFor(52.52, 13.405).size()), 1);
 }

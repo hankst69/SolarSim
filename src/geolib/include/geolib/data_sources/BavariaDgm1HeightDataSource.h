@@ -48,7 +48,7 @@ public:
     /// Bounding box of Bavaria (slightly enlarged).
     GeoBounds coverage() const override { return {47.20, 50.60, 8.90, 13.90}; }
 
-    double resolutionM() const override { return 1.0; }
+    double resolution() const override { return 1.0; }
 
     bool sampleHeight(double latitudeDeg, double longitudeDeg,
                       double& heightM) const override;

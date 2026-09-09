@@ -50,7 +50,7 @@ void testCoverage()
     CHECK_TRUE(source.covers(51.0504, 13.7373)); // Dresden
     CHECK_FALSE(source.covers(48.2082, 16.3738)); // Vienna
     CHECK_FALSE(source.covers(51.5074, -0.1278)); // London
-    CHECK_NEAR(source.resolutionM(), 5.0, 1e-12);
+    CHECK_NEAR(source.resolution(), 5.0, 1e-12);
     CHECK_FALSE(source.name().empty());
 }
 

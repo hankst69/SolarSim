@@ -50,7 +50,7 @@ public:
     /// GLO-30 is a global data set; tiles simply do not exist over open water.
     GeoBounds coverage() const override { return {-90.0, 90.0, -180.0, 180.0}; }
 
-    double resolutionM() const override { return 30.0; }
+    double resolution() const override { return 30.0; }
 
     bool sampleHeight(double latitudeDeg, double longitudeDeg,
                       double& heightM) const override;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "GeoDataSources.h"
+
 #include "geolib/DateTimeUtc.h"
 #include "geolib/GeoLocation.h"
 #include "geolib/SunPath.h"
@@ -46,6 +48,7 @@ private slots:
     void onPlaybackTick();
 
 private:
+    void registerGeoDataSources();
     void buildUi();
     void rebuildScene();
     void rebuildSunPath();
@@ -54,6 +57,8 @@ private:
     void updateStatus(const geo::DateTimeUtc& utc);
     geo::DateTimeUtc timeForSlider(int value) const;
     void setPlaying(bool playing);
+
+    GeoDataSources* m_geo_data_sources{nullptr};
 
     geo::GeoLocation m_location;
     std::shared_ptr<geo::TerrainModel> m_terrain;

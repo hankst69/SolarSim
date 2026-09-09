@@ -55,7 +55,7 @@ public:
     /// this box is not complete; missing tiles are reported by sampleHeight().
     GeoBounds coverage() const override { return {49.80, 56.00, -6.50, 2.00}; }
 
-    double resolutionM() const override { return 1.0; }
+    double resolution() const override { return 1.0; }
 
     bool sampleHeight(double latitudeDeg, double longitudeDeg,
                       double& heightM) const override;

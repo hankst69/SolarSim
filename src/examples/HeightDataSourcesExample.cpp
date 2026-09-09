@@ -260,7 +260,7 @@ void printRegisteredSources(const geo::HeightDataSourceRegistry& registry)
 {
     std::cout << "Registered height data sources:\n";
     for (const auto& source : registry.sources()) {
-        std::cout << "  - " << source->name() << " (resolution " << source->resolutionM()
+        std::cout << "  - " << source->name() << " (resolution " << source->resolution()
                   << " m)\n";
     }
 }

@@ -26,7 +26,7 @@ public:
 
     std::string name() const override { return "slope"; }
     GeoBounds coverage() const override { return GeoBounds::world(); }
-    double resolutionM() const override { return 1.0; }
+    double resolution() const override { return 1.0; }
 
     bool sampleHeight(double latitudeDeg, double, double& heightM) const override
     {
@@ -45,7 +45,7 @@ class HoleSource : public HeightDataSource {
 public:
     std::string name() const override { return "hole"; }
     GeoBounds coverage() const override { return GeoBounds::world(); }
-    double resolutionM() const override { return 1.0; }
+    double resolution() const override { return 1.0; }
 
     bool sampleHeight(double latitudeDeg, double longitudeDeg, double& heightM) const override
     {

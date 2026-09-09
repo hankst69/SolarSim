@@ -53,7 +53,7 @@ public:
     /// Bounding box of Germany (slightly enlarged).
     GeoBounds coverage() const override { return {47.10, 55.15, 5.80, 15.10}; }
 
-    double resolutionM() const override { return 5.0; }
+    double resolution() const override { return 5.0; }
 
     bool sampleHeight(double latitudeDeg, double longitudeDeg,
                       double& heightM) const override;

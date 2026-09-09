@@ -27,8 +27,10 @@ endif()
 add_library(SolarSimAppLib STATIC
     MainWindow.cpp
     MainWindow.h
-    HeightDataSources.cpp
-    HeightDataSources.h
+    GeoDataSources.cpp
+    GeoDataSources.h
+    GeoHeightDataSources.cpp
+    GeoHeightDataSources.h
 )
 
 if(SOLARSIM_USE_OPENGL)

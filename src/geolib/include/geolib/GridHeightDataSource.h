@@ -18,7 +18,7 @@ public:
 
     std::string name() const override { return "Flat terrain (fallback)"; }
     GeoBounds coverage() const override { return GeoBounds::world(); }
-    double resolutionM() const override { return m_resolutionM; }
+    double resolution() const override { return m_resolutionM; }
 
     bool sampleHeight(double, double, double& heightM) const override
     {
@@ -45,10 +45,9 @@ public:
 
     std::string name() const override { return m_name; }
     GeoBounds coverage() const override { return m_bounds; }
-    double resolutionM() const override { return m_resolutionM; }
+    double resolution() const override { return m_resolutionM; }
 
-    bool sampleHeight(double latitudeDeg, double longitudeDeg,
-                      double& heightM) const override;
+    bool sampleHeight(double latitudeDeg, double longitudeDeg, double& heightM) const override;
 
     int columns() const { return m_columns; }
     int rows() const { return m_rows; }

@@ -45,7 +45,7 @@ void testTileKeyOrdering()
 void testCoverage()
 {
     const BavariaDgm1HeightDataSource source({});
-    CHECK_NEAR(source.resolutionM(), 1.0, 1e-12);
+    CHECK_NEAR(source.resolution(), 1.0, 1e-12);
     CHECK_TRUE(source.covers(48.1372, 11.5756));  // Munich
     CHECK_TRUE(source.covers(49.4521, 11.0767));  // Nuremberg
     CHECK_FALSE(source.covers(52.5200, 13.4050)); // Berlin, outside Bavaria

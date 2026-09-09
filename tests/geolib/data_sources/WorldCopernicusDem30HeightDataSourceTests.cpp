@@ -45,7 +45,7 @@ void testCoverageIsGlobal()
     CHECK_TRUE(source.covers(48.0, 11.0));
     CHECK_TRUE(source.covers(-45.0, 170.0));
     CHECK_FALSE(source.covers(95.0, 11.0));
-    CHECK_NEAR(source.resolutionM(), 30.0, 1e-9);
+    CHECK_NEAR(source.resolution(), 30.0, 1e-9);
     CHECK_FALSE(source.name().empty());
 }
 

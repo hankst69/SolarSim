@@ -54,7 +54,7 @@ void testCoverage()
     CHECK_TRUE(source.covers(51.5, -1.0));
     CHECK_FALSE(source.covers(48.1372, 11.5756)); // Munich
     CHECK_FALSE(source.covers(51.5, 5.0));        // Netherlands
-    CHECK_NEAR(source.resolutionM(), 1.0, 1e-12);
+    CHECK_NEAR(source.resolution(), 1.0, 1e-12);
     CHECK_FALSE(source.name().empty());
 }
 

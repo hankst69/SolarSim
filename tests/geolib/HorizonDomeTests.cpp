@@ -30,7 +30,7 @@ public:
 
     std::string name() const override { return "ConstantHeightDataSource"; }
     GeoBounds coverage() const override { return GeoBounds::world(); }
-    double resolutionM() const override { return 1.0; }
+    double resolution() const override { return 1.0; }
 
     bool sampleHeight(double, double, double& heightM) const override
     {

@@ -60,7 +60,7 @@ public:
     /// sampleHeight().
     GeoBounds coverage() const override { return {18.00, 72.00, -172.00, -66.00}; }
 
-    double resolutionM() const override { return 1.0; }
+    double resolution() const override { return 1.0; }
 
     bool sampleHeight(double latitudeDeg, double longitudeDeg,
                       double& heightM) const override;

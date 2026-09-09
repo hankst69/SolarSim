@@ -1,6 +1,6 @@
 #include "MainWindow.h"
 
-#include "HeightDataSources.h"
+#include "GeoDataSources.h"
 #if !defined(SOLARSIM_USE_OPENGL)
 #include "SceneView.h"
 #endif
@@ -61,18 +61,30 @@ MainWindow::MainWindow(QWidget* parent)
 {
     buildUi();
 
+    setWindowTitle(tr("SolarSim"));
+    resize(1080, 720);
+
     const QDate today = QDate::currentDate();
     m_dateEdit->setDate(today);
+
+    registerGeoDataSources();
 
     rebuildScene();
     rebuildSunPath();
     onResetCamera();
-
-    setWindowTitle(tr("SolarSim"));
-    resize(1080, 720);
 }
 
 MainWindow::~MainWindow() = default;
+
+
+void MainWindow::registerGeoDataSources()
+{
+    if (!m_geo_data_sources) {
+        m_geo_data_sources = new GeoDataSources();
+    }
+    m_geo_data_sources->registerDataSources();
+}
+
 
 void MainWindow::buildUi()
 {
@@ -210,15 +222,6 @@ void MainWindow::buildUi()
 
 void MainWindow::rebuildScene()
 {
-    // Register the concrete height data sources (Bavaria DGM1, World
-    // Copernicus DEM GLO-30) on top of the flat fallback, so the app prefers
-    // real elevation data where available.
-    geo::HeightDataSourceRegistry& registry = geo::HeightDataSourceRegistry::instance();
-    registerHeightDataSources();
-    if (registry.sources().empty()) {
-        registry.addSource(std::make_shared<geo::FlatHeightDataSource>());
-    }
-
     const geo::HorizonDome dome = geo::HorizonDome::fromHeightDataSourceRegistry(m_location);
 
     geo::TerrainModel::Config config;
@@ -227,7 +230,7 @@ void MainWindow::rebuildScene()
     config.clipToDomeCircle = false;
 
     m_terrain = std::make_shared<geo::TerrainModel>(
-        dome, registry.selectSource(m_location), config);
+        dome, m_geo_data_sources->heightDataSources().selectSource(m_location), config);
 
     m_sceneView->setTerrain(m_terrain);
 }

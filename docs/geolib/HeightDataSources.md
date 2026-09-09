@@ -3,7 +3,7 @@
 Terrain heights are read through the abstract `HeightDataSource` interface. A
 source reports its `name()`, the geographic area it can deliver values for
 (`coverage()` as a `GeoBounds` box), its nominal ground sample distance
-(`resolutionM()`) and answers `sampleHeight(lat, lon, height)` with the height
+(`resolution()`) and answers `sampleHeight(lat, lon, height)` with the height
 in metres above the reference surface. Returning `false` marks a data gap, a
 missing tile or a location outside the coverage.
 
