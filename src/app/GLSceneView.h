@@ -2,6 +2,7 @@
 
 #include "geolib/CameraPosition.h"
 #include "geolib/DateTimeUtc.h"
+#include "geolib/SunPath.h"
 #include "geolib/SunLight.h"
 #include "geolib/TerrainModel.h"
 
@@ -13,6 +14,7 @@
 #include <QMatrix4x4>
 
 #include <memory>
+#include <vector>
 
 /// Hardware accelerated view of the terrain scene, built on Qt's OpenGL
 /// integration (QOpenGLWidget/QOpenGLFunctions). This uses Qt's own 3D GPU
@@ -59,7 +61,9 @@ private:
 
     void rebuildLight();
     void rebuildGeometry();
+    void rebuildSunOverlay();
     void uploadGeometryIfNeeded();
+    void uploadSunOverlayIfNeeded();
 
     std::shared_ptr<const geo::TerrainModel> m_terrain;
     std::unique_ptr<geo::CameraPosition> m_camera;
@@ -69,9 +73,17 @@ private:
     QOpenGLShaderProgram m_program;
     QOpenGLBuffer m_vertexBuffer{QOpenGLBuffer::VertexBuffer};
     QOpenGLVertexArrayObject m_vao;
+    QOpenGLBuffer m_overlayVertexBuffer{QOpenGLBuffer::VertexBuffer};
+    QOpenGLVertexArrayObject m_overlayVao;
     int m_vertexCount{0};
+    int m_overlayVertexCount{0};
     bool m_geometryDirty{true};
+    bool m_overlayDirty{true};
     bool m_glInitialized{false};
+
+    std::vector<geo::Vector3> m_sunPathPoints;
+    geo::Vector3 m_currentSunPoint;
+    bool m_hasCurrentSunPoint{false};
 
     QPoint m_lastMousePos;
 };

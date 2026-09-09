@@ -1,4 +1,5 @@
 #include "GLSceneView.h"
+#include "GLSceneView.h"
 
 #include <QMouseEvent>
 #include <QWheelEvent>
@@ -13,6 +14,8 @@ constexpr double kAmbient = 0.18;
 constexpr double kSkyFill = 0.12;
 constexpr double kSunDiffuse = 0.85;
 constexpr float kTerrainColor[3] = {126.0f / 255.0f, 138.0f / 255.0f, 104.0f / 255.0f};
+constexpr float kSunOverlayColor[3] = {0.0f, 0.0f, 0.0f};
+constexpr int kSunPathSampleCount = 144;
 
 double clamp01(double value)
 {
@@ -61,6 +64,8 @@ GLSceneView::~GLSceneView()
     makeCurrent();
     m_vertexBuffer.destroy();
     m_vao.destroy();
+    m_overlayVertexBuffer.destroy();
+    m_overlayVao.destroy();
     doneCurrent();
 }
 
@@ -82,8 +87,17 @@ void GLSceneView::initializeGL()
 
     m_vao.release();
 
+    m_overlayVao.create();
+    m_overlayVao.bind();
+
+    m_overlayVertexBuffer.create();
+    m_overlayVertexBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
+
+    m_overlayVao.release();
+
     m_glInitialized = true;
     uploadGeometryIfNeeded();
+    uploadSunOverlayIfNeeded();
 }
 
 void GLSceneView::resizeGL(int /*w*/, int /*h*/)
@@ -108,11 +122,53 @@ void GLSceneView::rebuildGeometry()
     }
 }
 
+void GLSceneView::rebuildSunOverlay()
+{
+    m_sunPathPoints.clear();
+    m_hasCurrentSunPoint = false;
+    m_overlayDirty = true;
+
+    if (!m_terrain) {
+        if (m_glInitialized) {
+            update();
+        }
+        return;
+    }
+
+    const geo::HorizonDome& dome = m_terrain->dome();
+    const geo::SunPath path(dome, m_utc.year, m_utc.month, m_utc.day, kSunPathSampleCount);
+
+    m_sunPathPoints = path.arcPoints();
+
+    geo::DateTimeUtc sunriseUtc;
+    if (path.sunrise(sunriseUtc)) {
+        const geo::SunPosition sunrisePos(dome.standpoint(), sunriseUtc);
+        m_sunPathPoints.insert(m_sunPathPoints.begin(), sunrisePos.projectOnDome(dome));
+    }
+
+    geo::DateTimeUtc sunsetUtc;
+    if (path.sunset(sunsetUtc)) {
+        const geo::SunPosition sunsetPos(dome.standpoint(), sunsetUtc);
+        m_sunPathPoints.push_back(sunsetPos.projectOnDome(dome));
+    }
+
+    const geo::SunPosition nowPos(dome.standpoint(), m_utc);
+    if (nowPos.isAboveHorizon()) {
+        m_currentSunPoint = nowPos.projectOnDome(dome);
+        m_hasCurrentSunPoint = true;
+    }
+
+    if (m_glInitialized) {
+        update();
+    }
+}
+
 void GLSceneView::setTerrain(std::shared_ptr<const geo::TerrainModel> terrain)
 {
     m_terrain = std::move(terrain);
     rebuildLight();
     rebuildGeometry();
+    rebuildSunOverlay();
 }
 
 void GLSceneView::setDateTime(const geo::DateTimeUtc& utc)
@@ -120,6 +176,7 @@ void GLSceneView::setDateTime(const geo::DateTimeUtc& utc)
     m_utc = utc;
     rebuildLight();
     rebuildGeometry();
+    rebuildSunOverlay();
 }
 
 void GLSceneView::setCamera(const geo::CameraPosition& camera)
@@ -201,6 +258,72 @@ void GLSceneView::uploadGeometryIfNeeded()
     m_vao.release();
 }
 
+void GLSceneView::uploadSunOverlayIfNeeded()
+{
+    if (!m_overlayDirty || !m_glInitialized) {
+        return;
+    }
+    m_overlayDirty = false;
+
+    std::vector<Vertex> overlayVertices;
+    overlayVertices.reserve(m_sunPathPoints.size() + (m_hasCurrentSunPoint ? 4 : 0));
+
+    for (const geo::Vector3& point : m_sunPathPoints) {
+        Vertex vertex{};
+        vertex.position[0] = static_cast<float>(point.x);
+        vertex.position[1] = static_cast<float>(point.y);
+        vertex.position[2] = static_cast<float>(point.z);
+        vertex.color[0] = kSunOverlayColor[0];
+        vertex.color[1] = kSunOverlayColor[1];
+        vertex.color[2] = kSunOverlayColor[2];
+        overlayVertices.push_back(vertex);
+    }
+
+    if (m_hasCurrentSunPoint && m_terrain) {
+        const geo::Vector3 normal = m_currentSunPoint.normalized();
+        geo::Vector3 tangentU = normal.cross(geo::Vector3{0.0, 0.0, 1.0});
+        if (tangentU.length() < 1e-9) {
+            tangentU = normal.cross(geo::Vector3{1.0, 0.0, 0.0});
+        }
+        tangentU = tangentU.normalized();
+        const geo::Vector3 tangentV = normal.cross(tangentU).normalized();
+
+        const double markerSizeM = std::clamp(m_terrain->dome().radius() * 0.005, 2.0, 30.0);
+        const geo::Vector3 p0 = m_currentSunPoint - tangentU * markerSizeM;
+        const geo::Vector3 p1 = m_currentSunPoint + tangentU * markerSizeM;
+        const geo::Vector3 p2 = m_currentSunPoint - tangentV * markerSizeM;
+        const geo::Vector3 p3 = m_currentSunPoint + tangentV * markerSizeM;
+
+        for (const geo::Vector3& p : {p0, p1, p2, p3}) {
+            Vertex vertex{};
+            vertex.position[0] = static_cast<float>(p.x);
+            vertex.position[1] = static_cast<float>(p.y);
+            vertex.position[2] = static_cast<float>(p.z);
+            vertex.color[0] = kSunOverlayColor[0];
+            vertex.color[1] = kSunOverlayColor[1];
+            vertex.color[2] = kSunOverlayColor[2];
+            overlayVertices.push_back(vertex);
+        }
+    }
+
+    m_overlayVertexCount = static_cast<int>(overlayVertices.size());
+
+    m_overlayVao.bind();
+    m_overlayVertexBuffer.bind();
+    m_overlayVertexBuffer.allocate(overlayVertices.data(),
+                                   static_cast<int>(overlayVertices.size() * sizeof(Vertex)));
+
+    m_program.bind();
+    m_program.enableAttributeArray(0);
+    m_program.setAttributeBuffer(0, GL_FLOAT, offsetof(Vertex, position), 3, sizeof(Vertex));
+    m_program.enableAttributeArray(1);
+    m_program.setAttributeBuffer(1, GL_FLOAT, offsetof(Vertex, color), 3, sizeof(Vertex));
+    m_program.release();
+
+    m_overlayVertexBuffer.release();
+    m_overlayVao.release();
+}
+
 void GLSceneView::paintGL()
 {
     const bool sunUp = m_light && m_light->isAboveHorizon();
@@ -212,6 +335,7 @@ void GLSceneView::paintGL()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     uploadGeometryIfNeeded();
+    uploadSunOverlayIfNeeded();
 
     if (!m_terrain || !m_camera || m_vertexCount == 0) {
         return;
@@ -244,6 +368,19 @@ void GLSceneView::paintGL()
     m_vao.bind();
     glDrawArrays(GL_TRIANGLES, 0, m_vertexCount);
     m_vao.release();
+
+    const int pathCount = static_cast<int>(m_sunPathPoints.size());
+    if (pathCount >= 2 && m_overlayVertexCount >= pathCount) {
+        m_overlayVao.bind();
+        glDrawArrays(GL_LINE_STRIP, 0, pathCount);
+
+        const int markerOffset = pathCount;
+        const int markerCount = m_overlayVertexCount - pathCount;
+        if (markerCount >= 4) {
+            glDrawArrays(GL_LINES, markerOffset, markerCount);
+        }
+        m_overlayVao.release();
+    }
 
     m_program.release();
 }

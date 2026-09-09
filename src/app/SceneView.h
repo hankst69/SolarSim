@@ -2,6 +2,7 @@
 
 #include "geolib/CameraPosition.h"
 #include "geolib/DateTimeUtc.h"
+#include "geolib/SunPath.h"
 #include "geolib/SunLight.h"
 #include "geolib/TerrainModel.h"
 
@@ -12,10 +13,13 @@
 #include <QWidget>
 
 #include <memory>
+#include <vector>
 
 #if defined(SOLARSIM_USE_WEBGPU)
 #include "GpuSceneRenderer.h"
 #endif
+
+class QPainter;
 
 /// View of the terrain scene.
 ///
@@ -58,7 +62,9 @@ private:
     };
 
     void rebuildLight();
+    void rebuildSunPathOverlay();
     void collectFaces(QVector<Face>& faces) const;
+    void drawSunOverlay(QPainter& painter) const;
     bool projectPoint(const geo::Vector3& local, QPointF& screen, double& depth) const;
     void updateViewFrame();
 
@@ -72,6 +78,9 @@ private:
     geo::Vector3 m_up;
     geo::Vector3 m_forward;
     geo::Vector3 m_target;
+    std::vector<geo::Vector3> m_sunPathPoints;
+    geo::Vector3 m_currentSunPoint;
+    bool m_hasCurrentSunPoint{false};
 
     QPoint m_lastMousePos;
 

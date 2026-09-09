@@ -2,6 +2,7 @@
 
 #include "geolib/CameraPosition.h"
 #include "geolib/DateTimeUtc.h"
+#include "geolib/SunPath.h"
 #include "geolib/SunLight.h"
 #include "geolib/TerrainModel.h"
 
@@ -9,6 +10,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 /// Hardware accelerated renderer for the terrain scene, built on the WebGPU
 /// C API (webgpu.h). The same code path works with a native WebGPU
@@ -57,8 +59,10 @@ private:
     void shutdown();
     void rebuildLight();
     void rebuildGeometry();
+    void rebuildSunOverlay();
     void ensurePipeline();
     void uploadGeometryIfDirty();
+    void uploadSunOverlayIfDirty();
 
     WGPUInstance m_instance{nullptr};
     WGPUAdapter m_adapter{nullptr};
@@ -67,7 +71,9 @@ private:
     WGPUSurface m_surface{nullptr};
     WGPUTextureFormat m_surfaceFormat{WGPUTextureFormat_Undefined};
     WGPURenderPipeline m_pipeline{nullptr};
+    WGPURenderPipeline m_overlayPipeline{nullptr};
     WGPUBuffer m_vertexBuffer{nullptr};
+    WGPUBuffer m_overlayVertexBuffer{nullptr};
     WGPUBuffer m_uniformBuffer{nullptr};
     WGPUBindGroup m_bindGroup{nullptr};
     WGPUTexture m_depthTexture{nullptr};
@@ -76,10 +82,16 @@ private:
     std::uint32_t m_width{1};
     std::uint32_t m_height{1};
     bool m_geometryDirty{true};
+    bool m_overlayDirty{true};
     std::uint32_t m_vertexCount{0};
+    std::uint32_t m_overlayVertexCount{0};
 
     std::shared_ptr<const geo::TerrainModel> m_terrain;
     std::unique_ptr<geo::SunLight> m_light;
     std::unique_ptr<geo::CameraPosition> m_camera;
     geo::DateTimeUtc m_utc;
+
+    std::vector<geo::Vector3> m_sunPathPoints;
+    geo::Vector3 m_currentSunPoint;
+    bool m_hasCurrentSunPoint{false};
 };

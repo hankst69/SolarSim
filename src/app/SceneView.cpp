@@ -4,6 +4,7 @@
 
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPolygonF>
 #include <QResizeEvent>
 #include <QWheelEvent>
@@ -28,6 +29,13 @@ constexpr double kSunDiffuse = 0.85;
 
 /// Base albedo colour of the terrain.
 const QColor kTerrainColor(126, 138, 104);
+
+/// Number of intervals used for sun path sampling (sampleCount + 1 points).
+constexpr int kSunPathSampleCount = 144;
+
+const QColor kSunPathColor(0, 0, 0); //(255, 210, 80);
+const QColor kSunMarkerColor(255, 240, 170);
+const QColor kSunMarkerOutlineColor(40, 35, 22); //(0, 0, 0);
 
 double clamp01(double value)
 {
@@ -69,6 +77,7 @@ void SceneView::setTerrain(std::shared_ptr<const geo::TerrainModel> terrain)
 {
     m_terrain = std::move(terrain);
     rebuildLight();
+    rebuildSunPathOverlay();
 
 #if defined(SOLARSIM_USE_WEBGPU)
     if (!m_gpuInitialized && m_gpuRenderer) {
@@ -88,6 +97,7 @@ void SceneView::setDateTime(const geo::DateTimeUtc& utc)
 {
     m_utc = utc;
     rebuildLight();
+    rebuildSunPathOverlay();
 
 #if defined(SOLARSIM_USE_WEBGPU)
     if (m_gpuInitialized) {
@@ -121,11 +131,89 @@ void SceneView::rebuildLight()
     m_light = std::make_unique<geo::SunLight>(*m_terrain, m_utc);
 }
 
+void SceneView::rebuildSunPathOverlay()
+{
+    m_sunPathPoints.clear();
+    m_hasCurrentSunPoint = false;
+
+    if (!m_terrain) {
+        return;
+    }
+
+    const geo::HorizonDome& dome = m_terrain->dome();
+    const geo::SunPath path(dome, m_utc.year, m_utc.month, m_utc.day, kSunPathSampleCount);
+
+    m_sunPathPoints = path.arcPoints();
+
+    geo::DateTimeUtc sunriseUtc;
+    if (path.sunrise(sunriseUtc)) {
+        const geo::SunPosition sunrisePos(dome.standpoint(), sunriseUtc);
+        m_sunPathPoints.insert(m_sunPathPoints.begin(), sunrisePos.projectOnDome(dome));
+    }
+
+    geo::DateTimeUtc sunsetUtc;
+    if (path.sunset(sunsetUtc)) {
+        const geo::SunPosition sunsetPos(dome.standpoint(), sunsetUtc);
+        m_sunPathPoints.push_back(sunsetPos.projectOnDome(dome));
+    }
+
+    const geo::SunPosition nowPos(dome.standpoint(), m_utc);
+    if (nowPos.isAboveHorizon()) {
+        m_currentSunPoint = nowPos.projectOnDome(dome);
+        m_hasCurrentSunPoint = true;
+    }
+}
+
 void SceneView::updateViewFrame()
 {
     if (!m_camera) {
         return;
     }
+
+void SceneView::drawSunOverlay(QPainter& painter) const
+{
+    if (!m_camera) {
+        return;
+    }
+
+    QVector<QPointF> projectedPath;
+    projectedPath.reserve(static_cast<int>(m_sunPathPoints.size()));
+
+    for (const geo::Vector3& point : m_sunPathPoints) {
+        QPointF screen;
+        double depth = 0.0;
+        if (projectPoint(point, screen, depth)) {
+            projectedPath.push_back(screen);
+        }
+    }
+
+    if (projectedPath.size() >= 2) {
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        QPen pathPen(kSunPathColor);
+        pathPen.setWidth(2);
+        painter.setPen(pathPen);
+        painter.setBrush(Qt::NoBrush);
+
+        QPainterPath path(projectedPath[0]);
+        for (int i = 1; i < projectedPath.size(); ++i) {
+            const QPointF& p0 = projectedPath[i - 1];
+            const QPointF& p1 = projectedPath[i];
+            path.quadTo((p0 + p1) * 0.5, p1);
+        }
+        painter.drawPath(path);
+    }
+
+    if (m_hasCurrentSunPoint) {
+        QPointF sunScreen;
+        double sunDepth = 0.0;
+        if (projectPoint(m_currentSunPoint, sunScreen, sunDepth)) {
+            painter.setRenderHint(QPainter::Antialiasing, true);
+            painter.setPen(QPen(kSunMarkerOutlineColor, 1));
+            painter.setBrush(kSunMarkerColor);
+            painter.drawEllipse(sunScreen, 5.0, 5.0);
+        }
+    }
+}
 
     m_eye = m_camera->localPosition();
     m_forward = m_camera->viewDirection();
@@ -267,6 +355,8 @@ void SceneView::paintEvent(QPaintEvent* /*event*/)
         painter.setBrush(face.color);
         painter.drawPolygon(polygon);
     }
+
+    drawSunOverlay(painter);
 }
 
 void SceneView::mousePressEvent(QMouseEvent* event)

@@ -82,6 +82,8 @@ constexpr double kAmbient = 0.18;
 constexpr double kSkyFill = 0.12;
 constexpr double kSunDiffuse = 0.85;
 constexpr float kTerrainColor[3] = {126.0f / 255.0f, 138.0f / 255.0f, 104.0f / 255.0f};
+constexpr float kSunOverlayColor[3] = {0.0f, 0.0f, 0.0f};
+constexpr int kSunPathSampleCount = 144;
 
 double clamp01(double value)
 {
@@ -131,7 +133,9 @@ void GpuSceneRenderer::shutdown()
 {
     if (m_bindGroup) { wgpuBindGroupRelease(m_bindGroup); m_bindGroup = nullptr; }
     if (m_uniformBuffer) { wgpuBufferRelease(m_uniformBuffer); m_uniformBuffer = nullptr; }
+    if (m_overlayVertexBuffer) { wgpuBufferRelease(m_overlayVertexBuffer); m_overlayVertexBuffer = nullptr; }
     if (m_vertexBuffer) { wgpuBufferRelease(m_vertexBuffer); m_vertexBuffer = nullptr; }
+    if (m_overlayPipeline) { wgpuRenderPipelineRelease(m_overlayPipeline); m_overlayPipeline = nullptr; }
     if (m_pipeline) { wgpuRenderPipelineRelease(m_pipeline); m_pipeline = nullptr; }
     if (m_depthView) { wgpuTextureViewRelease(m_depthView); m_depthView = nullptr; }
     if (m_depthTexture) { wgpuTextureRelease(m_depthTexture); m_depthTexture = nullptr; }
@@ -282,7 +286,7 @@ void GpuSceneRenderer::resize(std::uint32_t widthPx, std::uint32_t heightPx)
 
 void GpuSceneRenderer::ensurePipeline()
 {
-    if (m_pipeline || !m_device) {
+    if ((m_pipeline && m_overlayPipeline) || !m_device) {
         return;
     }
 
@@ -356,6 +360,9 @@ void GpuSceneRenderer::ensurePipeline()
 
     m_pipeline = wgpuDeviceCreateRenderPipeline(m_device, &pipelineDesc);
 
+    pipelineDesc.primitive.topology = WGPUPrimitiveTopology_LineList;
+    m_overlayPipeline = wgpuDeviceCreateRenderPipeline(m_device, &pipelineDesc);
+
     WGPUBufferDescriptor uniformDesc{};
     uniformDesc.size = sizeof(Mat4);
     uniformDesc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
@@ -382,6 +389,7 @@ void GpuSceneRenderer::setTerrain(std::shared_ptr<const geo::TerrainModel> terra
     m_terrain = std::move(terrain);
     rebuildLight();
     rebuildGeometry();
+    rebuildSunOverlay();
 }
 
 void GpuSceneRenderer::setDateTime(const geo::DateTimeUtc& utc)
@@ -389,6 +397,7 @@ void GpuSceneRenderer::setDateTime(const geo::DateTimeUtc& utc)
     m_utc = utc;
     rebuildLight();
     rebuildGeometry();
+    rebuildSunOverlay();
 }
 
 void GpuSceneRenderer::setCamera(const geo::CameraPosition& camera)
@@ -408,6 +417,40 @@ void GpuSceneRenderer::rebuildLight()
 void GpuSceneRenderer::rebuildGeometry()
 {
     m_geometryDirty = true;
+}
+
+void GpuSceneRenderer::rebuildSunOverlay()
+{
+    m_sunPathPoints.clear();
+    m_hasCurrentSunPoint = false;
+    m_overlayDirty = true;
+
+    if (!m_terrain) {
+        return;
+    }
+
+    const geo::HorizonDome& dome = m_terrain->dome();
+    const geo::SunPath path(dome, m_utc.year, m_utc.month, m_utc.day, kSunPathSampleCount);
+
+    m_sunPathPoints = path.arcPoints();
+
+    geo::DateTimeUtc sunriseUtc;
+    if (path.sunrise(sunriseUtc)) {
+        const geo::SunPosition sunrisePos(dome.standpoint(), sunriseUtc);
+        m_sunPathPoints.insert(m_sunPathPoints.begin(), sunrisePos.projectOnDome(dome));
+    }
+
+    geo::DateTimeUtc sunsetUtc;
+    if (path.sunset(sunsetUtc)) {
+        const geo::SunPosition sunsetPos(dome.standpoint(), sunsetUtc);
+        m_sunPathPoints.push_back(sunsetPos.projectOnDome(dome));
+    }
+
+    const geo::SunPosition nowPos(dome.standpoint(), m_utc);
+    if (nowPos.isAboveHorizon()) {
+        m_currentSunPoint = nowPos.projectOnDome(dome);
+        m_hasCurrentSunPoint = true;
+    }
 }
 
 void GpuSceneRenderer::uploadGeometryIfDirty()
@@ -483,6 +526,88 @@ void GpuSceneRenderer::uploadGeometryIfDirty()
     wgpuQueueWriteBuffer(m_queue, m_vertexBuffer, 0, gpuVertices.data(), byteSize);
 }
 
+void GpuSceneRenderer::uploadSunOverlayIfDirty()
+{
+    if (!m_overlayDirty || !m_terrain || !m_device) {
+        return;
+    }
+    m_overlayDirty = false;
+
+    std::vector<Vertex> overlayVertices;
+    if (m_sunPathPoints.size() >= 2) {
+        overlayVertices.reserve((m_sunPathPoints.size() - 1) * 2 + (m_hasCurrentSunPoint ? 4 : 0));
+    } else {
+        overlayVertices.reserve(m_hasCurrentSunPoint ? 4 : 0);
+    }
+
+    for (std::size_t i = 1; i < m_sunPathPoints.size(); ++i) {
+        const geo::Vector3& p0 = m_sunPathPoints[i - 1];
+        const geo::Vector3& p1 = m_sunPathPoints[i];
+
+        Vertex v0{};
+        v0.position[0] = static_cast<float>(p0.x);
+        v0.position[1] = static_cast<float>(p0.y);
+        v0.position[2] = static_cast<float>(p0.z);
+        v0.color[0] = kSunOverlayColor[0];
+        v0.color[1] = kSunOverlayColor[1];
+        v0.color[2] = kSunOverlayColor[2];
+        overlayVertices.push_back(v0);
+
+        Vertex v1{};
+        v1.position[0] = static_cast<float>(p1.x);
+        v1.position[1] = static_cast<float>(p1.y);
+        v1.position[2] = static_cast<float>(p1.z);
+        v1.color[0] = kSunOverlayColor[0];
+        v1.color[1] = kSunOverlayColor[1];
+        v1.color[2] = kSunOverlayColor[2];
+        overlayVertices.push_back(v1);
+    }
+
+    if (m_hasCurrentSunPoint) {
+        const geo::Vector3 normal = m_currentSunPoint.normalized();
+        geo::Vector3 tangentU = normal.cross(geo::Vector3{0.0, 0.0, 1.0});
+        if (tangentU.length() < 1e-9) {
+            tangentU = normal.cross(geo::Vector3{1.0, 0.0, 0.0});
+        }
+        tangentU = tangentU.normalized();
+        const geo::Vector3 tangentV = normal.cross(tangentU).normalized();
+        const double markerSizeM = std::clamp(m_terrain->dome().radius() * 0.005, 2.0, 30.0);
+
+        const geo::Vector3 p0 = m_currentSunPoint - tangentU * markerSizeM;
+        const geo::Vector3 p1 = m_currentSunPoint + tangentU * markerSizeM;
+        const geo::Vector3 p2 = m_currentSunPoint - tangentV * markerSizeM;
+        const geo::Vector3 p3 = m_currentSunPoint + tangentV * markerSizeM;
+
+        for (const geo::Vector3& p : {p0, p1, p2, p3}) {
+            Vertex v{};
+            v.position[0] = static_cast<float>(p.x);
+            v.position[1] = static_cast<float>(p.y);
+            v.position[2] = static_cast<float>(p.z);
+            v.color[0] = kSunOverlayColor[0];
+            v.color[1] = kSunOverlayColor[1];
+            v.color[2] = kSunOverlayColor[2];
+            overlayVertices.push_back(v);
+        }
+    }
+
+    m_overlayVertexCount = static_cast<std::uint32_t>(overlayVertices.size());
+
+    if (m_overlayVertexBuffer) {
+        wgpuBufferRelease(m_overlayVertexBuffer);
+        m_overlayVertexBuffer = nullptr;
+    }
+    if (m_overlayVertexCount == 0) {
+        return;
+    }
+
+    const std::uint64_t byteSize = overlayVertices.size() * sizeof(Vertex);
+    WGPUBufferDescriptor vbDesc{};
+    vbDesc.size = byteSize;
+    vbDesc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
+    m_overlayVertexBuffer = wgpuDeviceCreateBuffer(m_device, &vbDesc);
+    wgpuQueueWriteBuffer(m_queue, m_overlayVertexBuffer, 0, overlayVertices.data(), byteSize);
+}
+
 void GpuSceneRenderer::renderFrame()
 {
     if (!isValid() || !m_terrain || !m_camera) {
@@ -490,6 +615,7 @@ void GpuSceneRenderer::renderFrame()
     }
 
     uploadGeometryIfDirty();
+    uploadSunOverlayIfDirty();
     if (m_vertexCount == 0) {
         return;
     }
@@ -564,6 +690,15 @@ void GpuSceneRenderer::renderFrame()
     wgpuRenderPassEncoderSetVertexBuffer(pass, 0, m_vertexBuffer, 0,
                                         m_vertexCount * sizeof(Vertex));
     wgpuRenderPassEncoderDraw(pass, m_vertexCount, 1, 0, 0);
+
+    if (m_overlayPipeline && m_overlayVertexBuffer && m_overlayVertexCount >= 2) {
+        wgpuRenderPassEncoderSetPipeline(pass, m_overlayPipeline);
+        wgpuRenderPassEncoderSetBindGroup(pass, 0, m_bindGroup, 0, nullptr);
+        wgpuRenderPassEncoderSetVertexBuffer(pass, 0, m_overlayVertexBuffer, 0,
+                                             m_overlayVertexCount * sizeof(Vertex));
+        wgpuRenderPassEncoderDraw(pass, m_overlayVertexCount, 1, 0, 0);
+    }
+
     wgpuRenderPassEncoderEnd(pass);
     wgpuRenderPassEncoderRelease(pass);
 
