@@ -9,7 +9,9 @@
 #include "geolib/GridHeightDataSource.h"
 #include "geolib/HeightDataSourceRegistry.h"
 #include "geolib/HorizonDome.h"
+#include "geolib/TimeZone.h"
 
+#include <QCheckBox>
 #include <QDate>
 #include <QDateEdit>
 #include <QDoubleSpinBox>
@@ -118,6 +120,11 @@ void MainWindow::buildUi()
     m_dateEdit->setDisplayFormat(QStringLiteral("yyyy-MM-dd"));
     dateLayout->addWidget(new QLabel(tr("Date:"), timeBox));
     dateLayout->addWidget(m_dateEdit);
+
+    m_localTimeCheckBox = new QCheckBox(tr("Display local time"), timeBox);
+    m_localTimeCheckBox->setObjectName(QStringLiteral("localTimeCheckBox"));
+    dateLayout->addWidget(m_localTimeCheckBox);
+
     dateLayout->addStretch(1);
     timeLayout->addLayout(dateLayout);
 
@@ -240,6 +247,7 @@ void MainWindow::buildUi()
     connect(m_playPauseButton, &QPushButton::clicked, this, &MainWindow::onPlayPauseClicked);
     connect(m_jumpToStartButton, &QPushButton::clicked, this, &MainWindow::onJumpToStart);
     connect(m_jumpToEndButton, &QPushButton::clicked, this, &MainWindow::onJumpToEnd);
+    connect(m_localTimeCheckBox, &QCheckBox::toggled, this, &MainWindow::onLocalTimeToggled);
 }
 
 void MainWindow::rebuildScene()
@@ -274,21 +282,15 @@ void MainWindow::rebuildSunPath()
     geo::DateTimeUtc rise;
     geo::DateTimeUtc set;
     if (m_sunPath->sunrise(rise) && m_sunPath->sunset(set)) {
+        m_sunriseUtc = rise;
+        m_sunsetUtc = set;
+        m_hasSunriseSunset = true;
         m_dayStartMinutes = minutesOfDay(rise);
         m_dayEndMinutes = minutesOfDay(set);
-
-        m_sunriseTimeLabel->setText(QStringLiteral("Sunrise %1:%2 UTC")
-                                        .arg(rise.hour, 2, 10, QLatin1Char('0'))
-                                        .arg(rise.minute, 2, 10, QLatin1Char('0')));
-        m_sunsetTimeLabel->setText(QStringLiteral("Sunset %1:%2 UTC")
-                                       .arg(set.hour, 2, 10, QLatin1Char('0'))
-                                       .arg(set.minute, 2, 10, QLatin1Char('0')));
     } else {
+        m_hasSunriseSunset = false;
         m_dayStartMinutes = 0.0;
         m_dayEndMinutes = 24.0 * 60.0;
-
-        m_sunriseTimeLabel->setText(tr("Sunrise --:--"));
-        m_sunsetTimeLabel->setText(tr("Sunset --:--"));
     }
     if (m_dayEndMinutes <= m_dayStartMinutes) {
         m_dayEndMinutes = m_dayStartMinutes + 1.0;
@@ -307,6 +309,7 @@ void MainWindow::rebuildSunPath()
     const double ticks = kPlaybackDurationMs / kPlaybackTickIntervalMs;
     m_playStepPerTick = std::max(1.0, m_timeSlider->maximum() / ticks);
 
+    updateSunriseSunsetLabels();
     applyTime(m_timeSlider->value());
 }
 
@@ -333,9 +336,12 @@ void MainWindow::applyTime(int sliderValue)
 
 void MainWindow::updateStatus(const geo::DateTimeUtc& utc)
 {
-    m_timeLabel->setText(QStringLiteral("%1:%2 UTC")
-                             .arg(utc.hour, 2, 10, QLatin1Char('0'))
-                             .arg(utc.minute, 2, 10, QLatin1Char('0')));
+    const geo::DateTimeUtc display = displayTimeFor(utc);
+    const QString zone = m_localTimeCheckBox->isChecked() ? tr("local") : QStringLiteral("UTC");
+    m_timeLabel->setText(QStringLiteral("%1:%2 %3")
+                             .arg(display.hour, 2, 10, QLatin1Char('0'))
+                             .arg(display.minute, 2, 10, QLatin1Char('0'))
+                             .arg(zone));
 
     const geo::SunPosition sun(m_location, utc);
     m_sunLabel->setText(tr("Sun: azimuth %1 deg, elevation %2 deg")
@@ -348,6 +354,39 @@ void MainWindow::updateStatus(const geo::DateTimeUtc& utc)
                                  .arg(m_terrain && m_terrain->hasHeightData() && m_terrain->source()
                                           ? QString::fromStdString(m_terrain->source()->name())
                                           : tr("no elevation data")));
+}
+
+void MainWindow::updateSunriseSunsetLabels()
+{
+    if (!m_hasSunriseSunset) {
+        m_sunriseTimeLabel->setText(tr("Sunrise --:--"));
+        m_sunsetTimeLabel->setText(tr("Sunset --:--"));
+        return;
+    }
+
+    const geo::DateTimeUtc rise = displayTimeFor(m_sunriseUtc);
+    const geo::DateTimeUtc set = displayTimeFor(m_sunsetUtc);
+    const QString zone = m_localTimeCheckBox->isChecked() ? tr("local") : QStringLiteral("UTC");
+
+    m_sunriseTimeLabel->setText(QStringLiteral("Sunrise %1:%2 %3")
+                                    .arg(rise.hour, 2, 10, QLatin1Char('0'))
+                                    .arg(rise.minute, 2, 10, QLatin1Char('0'))
+                                    .arg(zone));
+    m_sunsetTimeLabel->setText(QStringLiteral("Sunset %1:%2 %3")
+                                   .arg(set.hour, 2, 10, QLatin1Char('0'))
+                                   .arg(set.minute, 2, 10, QLatin1Char('0'))
+                                   .arg(zone));
+}
+
+geo::DateTimeUtc MainWindow::displayTimeFor(const geo::DateTimeUtc& utc) const
+{
+    if (!m_localTimeCheckBox->isChecked()) {
+        return utc;
+    }
+
+    const int timeZoneCode = geo::TimeZone::codeForLocation(m_location);
+    const bool dst = geo::TimeZone::isDaylightSavingTime(timeZoneCode, utc);
+    return geo::TimeZone::toLocalTime(utc, timeZoneCode, dst);
 }
 
 void MainWindow::updateCameraControls()
@@ -455,4 +494,10 @@ void MainWindow::onPlaybackTick()
         return;
     }
     m_timeSlider->setValue(next);
+}
+
+void MainWindow::onLocalTimeToggled(bool)
+{
+    updateSunriseSunsetLabels();
+    applyTime(m_timeSlider->value());
 }

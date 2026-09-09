@@ -20,6 +20,7 @@ using SceneViewWidget = SceneView;
 #endif
 
 class QDateEdit;
+class QCheckBox;
 class QDoubleSpinBox;
 class QLabel;
 class QPushButton;
@@ -46,6 +47,7 @@ private slots:
     void onJumpToStart();
     void onJumpToEnd();
     void onPlaybackTick();
+    void onLocalTimeToggled(bool checked);
 
 protected:
     void showEvent(QShowEvent* event) override;
@@ -58,6 +60,8 @@ private:
     void applyTime(int sliderValue);
     void updateCameraControls();
     void updateStatus(const geo::DateTimeUtc& utc);
+    void updateSunriseSunsetLabels();
+    geo::DateTimeUtc displayTimeFor(const geo::DateTimeUtc& utc) const;
     geo::DateTimeUtc timeForSlider(int value) const;
     void setPlaying(bool playing);
 
@@ -73,6 +77,7 @@ private:
     bool m_sceneInitialized{false};
     SceneViewWidget* m_sceneView{nullptr};
     QDateEdit* m_dateEdit{nullptr};
+    QCheckBox* m_localTimeCheckBox{nullptr};
     QSlider* m_timeSlider{nullptr};
     QLabel* m_timeLabel{nullptr};
     QLabel* m_sunriseTimeLabel{nullptr};
@@ -89,4 +94,7 @@ private:
 
     bool m_updatingControls{false};
     bool m_isPlaying{false};
+    geo::DateTimeUtc m_sunriseUtc;
+    geo::DateTimeUtc m_sunsetUtc;
+    bool m_hasSunriseSunset{false};
 };
