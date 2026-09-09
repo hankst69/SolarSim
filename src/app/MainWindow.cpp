@@ -35,7 +35,8 @@ constexpr double kHomeLatitudeDeg = 49.56255;
 constexpr double kHomeLongitudeDeg = 11.14493;
 
 /// Extent (half size of the rendered terrain patch in metres.
-constexpr double kSceneExtentM = 400.0;
+/// Values <= 0 use the full ground-plane radius of the horizon dome.
+constexpr double kSceneExtentM = 0.0;
 
 /// Grid spacing of the terrain mesh in metres.
 constexpr double kSceneGridSpacingM = 10.0;
@@ -257,7 +258,7 @@ void MainWindow::rebuildScene()
     geo::TerrainModel::Config config;
     config.extentM = kSceneExtentM;
     config.gridSpacingM = kSceneGridSpacingM;
-    config.clipToDomeCircle = false;
+    config.clipToDomeCircle = true;
 
     m_terrain = std::make_shared<geo::TerrainModel>(
         dome, m_geo_data_sources->heightDataSources().selectSource(m_location), config);
