@@ -12,6 +12,7 @@ add_library(geolib
     src/SunPath.cpp
     src/SunEnergy.cpp
     src/SunLight.cpp
+    src/TimeZone.cpp
     src/TerrainModel.cpp
     src/TriangleMesh.cpp
     src/UtmProjection.cpp
