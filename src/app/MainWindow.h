@@ -47,6 +47,9 @@ private slots:
     void onJumpToEnd();
     void onPlaybackTick();
 
+protected:
+    void showEvent(QShowEvent* event) override;
+
 private:
     void registerGeoDataSources();
     void buildUi();
@@ -67,6 +70,7 @@ private:
     double m_dayStartMinutes{0.0};
     double m_dayEndMinutes{24.0 * 60.0};
 
+    bool m_sceneInitialized{false};
     SceneViewWidget* m_sceneView{nullptr};
     QDateEdit* m_dateEdit{nullptr};
     QSlider* m_timeSlider{nullptr};

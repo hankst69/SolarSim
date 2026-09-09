@@ -32,7 +32,7 @@ namespace {
 constexpr double kHomeLatitudeDeg = 49.56255;
 constexpr double kHomeLongitudeDeg = 11.14493;
 
-/// Extent (half size) of the rendered terrain patch in metres.
+/// Extent (half size of the rendered terrain patch in metres.
 constexpr double kSceneExtentM = 400.0;
 
 /// Grid spacing of the terrain mesh in metres.
@@ -68,10 +68,22 @@ MainWindow::MainWindow(QWidget* parent)
     m_dateEdit->setDate(today);
 
     registerGeoDataSources();
+}
 
-    rebuildScene();
-    rebuildSunPath();
-    onResetCamera();
+void MainWindow::showEvent(QShowEvent* event)
+{
+    QMainWindow::showEvent(event);
+
+    if (m_sceneInitialized) {
+        return;
+    }
+    m_sceneInitialized = true;
+
+    QTimer::singleShot(0, this, [this]() {
+        rebuildScene();
+        rebuildSunPath();
+        onResetCamera();
+    });
 }
 
 MainWindow::~MainWindow() = default;
@@ -110,22 +122,47 @@ void MainWindow::buildUi()
     timeLayout->addLayout(dateLayout);
 
     auto* sliderGrid = new QGridLayout();
-    sliderGrid->addWidget(new QLabel(tr("Sunrise"), timeBox), 0, 0, Qt::AlignHCenter);
+
+    // Top info row above the time slider:
+    // sunrise time (left), current time + sun position (center), sunset time (right).
+    m_sunriseTimeLabel = new QLabel(timeBox);
+    m_sunriseTimeLabel->setObjectName(QStringLiteral("sunriseTimeLabel"));
+    m_sunriseTimeLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+    sliderGrid->addWidget(m_sunriseTimeLabel, 0, 0);
+
+    auto* centerInfoLayout = new QHBoxLayout();
+    centerInfoLayout->addStretch(1);
+
+    m_timeLabel = new QLabel(timeBox);
+    m_timeLabel->setObjectName(QStringLiteral("timeLabel"));
+    m_timeLabel->setMinimumWidth(120);
+    m_timeLabel->setAlignment(Qt::AlignVCenter | Qt::AlignRight);
+    centerInfoLayout->addWidget(m_timeLabel);
+
+    centerInfoLayout->addSpacing(16);
+
+    m_sunLabel = new QLabel(timeBox);
+    m_sunLabel->setObjectName(QStringLiteral("sunLabel"));
+    m_sunLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+    centerInfoLayout->addWidget(m_sunLabel);
+
+    centerInfoLayout->addStretch(1);
+    sliderGrid->addLayout(centerInfoLayout, 0, 1);
+
+    m_sunsetTimeLabel = new QLabel(timeBox);
+    m_sunsetTimeLabel->setObjectName(QStringLiteral("sunsetTimeLabel"));
+    m_sunsetTimeLabel->setAlignment(Qt::AlignVCenter | Qt::AlignRight);
+    sliderGrid->addWidget(m_sunsetTimeLabel, 0, 2);
 
     m_timeSlider = new QSlider(Qt::Horizontal, timeBox);
     m_timeSlider->setObjectName(QStringLiteral("timeSlider"));
     m_timeSlider->setTracking(true);
-    sliderGrid->addWidget(m_timeSlider, 0, 1);
+    //sliderGrid->addWidget(new QLabel(tr("Sunrise"), timeBox), 1, 0, Qt::AlignHCenter);
+    //sliderGrid->addWidget(m_timeSlider, 1, 1);
+    //sliderGrid->addWidget(new QLabel(tr("Sunset"), timeBox), 1, 2, Qt::AlignHCenter);
+    sliderGrid->addWidget(m_timeSlider, 1, 0, 1, 3);
 
-    sliderGrid->addWidget(new QLabel(tr("Sunset"), timeBox), 0, 2, Qt::AlignHCenter);
-
-    m_sunriseTimeLabel = new QLabel(timeBox);
-    m_sunriseTimeLabel->setObjectName(QStringLiteral("sunriseTimeLabel"));
-    m_sunriseTimeLabel->setAlignment(Qt::AlignHCenter);
-    sliderGrid->addWidget(m_sunriseTimeLabel, 1, 0);
-
-    // Playback controls: jump to sunrise, play/pause, jump to sunset, with
-    // the current time shown tight next to the play/pause button.
+    // Playback controls: jump to sunrise, play/pause, jump to sunset.
     auto* playLayout = new QHBoxLayout();
     playLayout->addStretch(1);
 
@@ -141,19 +178,8 @@ void MainWindow::buildUi()
     m_jumpToEndButton->setObjectName(QStringLiteral("jumpToEndButton"));
     playLayout->addWidget(m_jumpToEndButton);
 
-    m_timeLabel = new QLabel(timeBox);
-    m_timeLabel->setObjectName(QStringLiteral("timeLabel"));
-    m_timeLabel->setMinimumWidth(120);
-    m_timeLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
-    playLayout->addWidget(m_timeLabel);
-
     playLayout->addStretch(1);
-    sliderGrid->addLayout(playLayout, 1, 1);
-
-    m_sunsetTimeLabel = new QLabel(timeBox);
-    m_sunsetTimeLabel->setObjectName(QStringLiteral("sunsetTimeLabel"));
-    m_sunsetTimeLabel->setAlignment(Qt::AlignHCenter);
-    sliderGrid->addWidget(m_sunsetTimeLabel, 1, 2);
+    sliderGrid->addLayout(playLayout, 2, 0, 1, 3);
 
     sliderGrid->setColumnStretch(1, 1);
     timeLayout->addLayout(sliderGrid);
@@ -191,10 +217,6 @@ void MainWindow::buildUi()
     auto* resetButton = new QPushButton(tr("Reset camera"), cameraBox);
     resetButton->setObjectName(QStringLiteral("resetCameraButton"));
     cameraLayout->addWidget(resetButton);
-
-    m_sunLabel = new QLabel(cameraBox);
-    m_sunLabel->setObjectName(QStringLiteral("sunLabel"));
-    cameraLayout->addWidget(m_sunLabel, 1);
 
     layout->addWidget(cameraBox);
 
@@ -255,18 +277,18 @@ void MainWindow::rebuildSunPath()
         m_dayStartMinutes = minutesOfDay(rise);
         m_dayEndMinutes = minutesOfDay(set);
 
-        m_sunriseTimeLabel->setText(QStringLiteral("%1:%2 UTC")
+        m_sunriseTimeLabel->setText(QStringLiteral("Sunrise %1:%2 UTC")
                                         .arg(rise.hour, 2, 10, QLatin1Char('0'))
                                         .arg(rise.minute, 2, 10, QLatin1Char('0')));
-        m_sunsetTimeLabel->setText(QStringLiteral("%1:%2 UTC")
+        m_sunsetTimeLabel->setText(QStringLiteral("Sunset %1:%2 UTC")
                                        .arg(set.hour, 2, 10, QLatin1Char('0'))
                                        .arg(set.minute, 2, 10, QLatin1Char('0')));
     } else {
         m_dayStartMinutes = 0.0;
         m_dayEndMinutes = 24.0 * 60.0;
 
-        m_sunriseTimeLabel->setText(tr("--:--"));
-        m_sunsetTimeLabel->setText(tr("--:--"));
+        m_sunriseTimeLabel->setText(tr("Sunrise --:--"));
+        m_sunsetTimeLabel->setText(tr("Sunset --:--"));
     }
     if (m_dayEndMinutes <= m_dayStartMinutes) {
         m_dayEndMinutes = m_dayStartMinutes + 1.0;
