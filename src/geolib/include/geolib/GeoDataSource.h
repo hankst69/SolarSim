@@ -2,7 +2,9 @@
 
 #include "geolib/GeoLocation.h"
 
+#include <memory>
 #include <string>
+#include <utility>
 
 namespace geo {
 
@@ -33,6 +35,12 @@ struct GeoBounds {
 ///
 class GeoDataSource {
 public:
+    class ProgressClass {
+    public:
+        virtual ~ProgressClass() = default;
+        virtual void progress(int percent, std::string msg) = 0;
+    };
+
     virtual ~GeoDataSource() = default;
 
     /// Human readable name of the data set, used for logging and selection
@@ -55,6 +63,22 @@ public:
     {
         return coverage().contains(location);
     }
+
+    void setProgressClass(std::shared_ptr<ProgressClass> progressClass)
+    {
+        m_progressClass = std::move(progressClass);
+    }
+
+protected:
+    void progress(int percent, std::string msg) const
+    {
+        if (m_progressClass) {
+            m_progressClass->progress(percent, std::move(msg));
+        }
+    }
+
+private:
+    std::shared_ptr<ProgressClass> m_progressClass;
 };
 
 using GeoDataSourcePtr = std::shared_ptr<GeoDataSource>;
