@@ -57,7 +57,33 @@ double minutesOfDay(const geo::DateTimeUtc& utc)
     return utc.hour * 60.0 + utc.minute + utc.second / 60.0;
 }
 
+class DataSourceProgress : public geo::GeoDataSource::ProgressClass {
+public:
+  DataSourceProgress(QWidget* parent) {
+    m_progressDialog = std::make_shared<QProgressDialog>("Downloading tiles...", QString(), 0, 0, parent);
+    m_progressDialog->setWindowModality(Qt::WindowModal);
+    m_progressDialog->setCancelButton(nullptr);
+    m_progressDialog->setMinimumDuration(0);
+    m_progressDialog->setWindowTitle("Loading terrain");
+    m_progressDialog->show();
+  }
+
+  ~DataSourceProgress() {
+    m_progressDialog->close();
+    m_progressDialog = nullptr;
+  }
+
+  virtual void progress(int percent, std::string msg) {
+    m_progressDialog->setRange(1, 100);
+    m_progressDialog->setValue(percent);
+  }
+
+private:
+  std::shared_ptr<QProgressDialog> m_progressDialog;
+};
+
 } // namespace
+
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
@@ -265,14 +291,13 @@ void MainWindow::buildUi()
 
 void MainWindow::rebuildScene()
 {
-    QProgressDialog loadingProgress(tr("Downloading terrain tiles..."), QString(), 0, 0, this);
-    loadingProgress.setWindowModality(Qt::WindowModal);
-    loadingProgress.setCancelButton(nullptr);
-    loadingProgress.setMinimumDuration(0);
-    loadingProgress.setWindowTitle(tr("Loading terrain"));
-    loadingProgress.show();
+    auto progressClass = std::make_shared<DataSourceProgress>(this);
+    m_geo_data_sources->setProgressClass(progressClass);
 
-    const geo::HorizonDome dome = geo::HorizonDome::fromHeightDataSourceRegistry(m_location);
+    auto heightDataSource = m_geo_data_sources->heightDataSources().selectSource(m_location);
+    //heightDataSource->setProgressClass(progressClass);
+
+    const geo::HorizonDome dome = geo::HorizonDome::fromHeightDataSource(m_location, heightDataSource);
 
     geo::TerrainModel::Config config;
     config.extentM = kSceneExtentM;
@@ -280,11 +305,12 @@ void MainWindow::rebuildScene()
     config.clipToDomeCircle = true;
 
     m_terrain = std::make_shared<geo::TerrainModel>(
-        dome, m_geo_data_sources->heightDataSources().selectSource(m_location), config);
+        dome, heightDataSource, config);
+
+    //heightDataSource->setProgressClass(nullptr);
+    m_geo_data_sources->setProgressClass(nullptr);
 
     m_sceneView->setTerrain(m_terrain);
-
-    loadingProgress.close();
 }
 
 void MainWindow::rebuildSunPath()

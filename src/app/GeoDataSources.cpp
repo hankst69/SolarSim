@@ -2,6 +2,15 @@
 
 #include "GeoDataSources.h"
 
+// for specific HeightDataSources
+#include "geolib/GridHeightDataSource.h"
+#include "geolib/HeightDataSourceRegistry.h"
+#include "geolib/data_sources/BavariaDgm1HeightDataSource.h"
+#include "geolib/data_sources/BavariaDgm1TileDownloader.h"
+#include "geolib/data_sources/WorldCopernicusDem30HeightDataSource.h"
+#include "geolib/data_sources/WorldCopernicusDem30TileDownloader.h"
+
+// for Qt based fetchUrl implementation
 #include <QByteArray>
 #include <QDir>
 #include <QEventLoop>
@@ -14,35 +23,9 @@
 #include <QString>
 #include <QUrl>
 
+
 //GeoDataSources::GeoDataSources() {}
 //GeoDataSources::~GeoDataSources() = default;
-
-void GeoDataSources::registerDataSources() 
-{
-    //if (!m_height_data_sources_registry)
-    //{
-    //  m_height_data_sources_registry = &(HeightDataSourceRegistry::instance());
-    //}
-    //if (!m_texture_data_sources_registry)
-    //{
-    //  m_texture_data_sources_registry = &(TextureDataSourceRegistry::instance());
-    //}
-
-    registerHeightDataSources();
-    registerTextureDataSources();
-}
-
-void GeoDataSources::registerTextureDataSources() {}
-
-geo::HeightDataSourceRegistry& GeoDataSources::heightDataSources()
-{
-    return *(m_height_data_sources_registry);
-}
-
-geo::TextureDataSourceRegistry& GeoDataSources::textureDataSources()
-{
-    return *(m_texture_data_sources_registry);
-}
 
 
 /// Fetches `url` into the local file `targetPath` using Qt Network. Runs a
@@ -50,6 +33,9 @@ geo::TextureDataSourceRegistry& GeoDataSources::textureDataSources()
 bool GeoDataSources::fetchUrl(const std::string& url, const std::string& targetPath,
                 const std::string& userName, const std::string& password)
 {
+    m_progressCount++;
+    progress(m_progressCount, targetPath);
+
     static QNetworkAccessManager manager;
 
     QNetworkRequest request{QUrl(QString::fromStdString(url))};
@@ -102,3 +88,98 @@ std::string GeoDataSources::cacheDirectoryFor(const std::string& subDirectory)
     auto stdpath = std::string(current_locale_text);
     return stdpath;
 }
+
+
+void GeoDataSources::registerDataSources()
+{
+    if (!m_height_data_sources_registry) {
+        m_height_data_sources_registry = &(geo::HeightDataSourceRegistry::instance());
+
+        for (const auto& source : m_height_data_sources_registry->sources()) {
+            if (source->name().find("DGM1") != std::string::npos ||
+                source->name().find("Copernicus") != std::string::npos) {
+                // Already registered.
+                return;
+            }
+        }
+
+        // register the BavariaDgm1 HeightDataSource
+        geo::BavariaDgm1TileDownloader::Config byConfig{};
+        byConfig.cacheDirectory = cacheDirectoryFor("height_data_cache/bavaria_dgm1");
+        byConfig.baseUrl = "https://download1.bayernwolke.de/a/dgm/dgm1xyz";
+        byConfig.fileExtension = ".zip";
+        byConfig.allowDownload = true;
+
+        geo::BavariaDgm1TileDownloader::FetchFunction byFetch =
+            [this](const std::string& url, const std::string& targetPath) -> bool {
+                return fetchUrl(url, targetPath, {}, {});
+            };
+
+        m_bavariaDgm1TileDownloader = std::make_shared<geo::BavariaDgm1TileDownloader>(byConfig, byFetch);
+
+        m_height_data_sources_registry->addSource(
+            std::make_shared<geo::BavariaDgm1HeightDataSource>(m_bavariaDgm1TileDownloader->tileLoader())
+        );
+
+        // register the WorldCopernicusDem30 HeightDataSource
+        geo::WorldCopernicusDem30TileDownloader::Config worldConfig{};
+        worldConfig.cacheDirectory = cacheDirectoryFor("height_data_cache/world_copernicus_dem30");
+        worldConfig.baseUrl = "https://copernicus-dem-30m.s3.amazonaws.com";
+        worldConfig.fileExtension = ".hgt";
+        worldConfig.allowDownload = true;
+
+        static const std::string kCopernicusUserName = "";
+        static const std::string kCopernicusPassword = "";
+
+        geo::WorldCopernicusDem30TileDownloader::FetchFunction worldFetch =
+            [this](const std::string& url, const std::string& targetPath) -> bool {
+                return fetchUrl(url, targetPath, kCopernicusUserName, kCopernicusPassword);
+        };
+
+        m_worldDem30TileDownloader = std::make_shared<geo::WorldCopernicusDem30TileDownloader>(worldConfig, worldFetch);
+
+        m_height_data_sources_registry->addSource(
+            std::make_shared<geo::WorldCopernicusDem30HeightDataSource>(m_worldDem30TileDownloader->tileLoader())
+        );
+    }
+}
+
+
+// for Qt based DataSource load prgress 
+//#include <QProgressDialog>
+//class DataSourceProgress : public geo::GeoDataSource::ProgressClass {
+//public:
+//  DataSourceProgress(QWidget* parent) {
+//    m_progressDialog = std::make_shared<QProgressDialog>("Downloading tiles...", QString(), 0, 0, parent);
+//    m_progressDialog->setWindowModality(Qt::WindowModal);
+//    m_progressDialog->setCancelButton(nullptr);
+//    m_progressDialog->setMinimumDuration(0);
+//    m_progressDialog->setWindowTitle("Loading terrain");
+//    m_progressDialog->show();
+//  }
+//
+//  ~DataSourceProgress() {
+//    m_progressDialog->close();
+//    m_progressDialog = nullptr;
+//  }
+//
+//  virtual void progress(int percent, std::string msg) {
+//    m_progressDialog->setRange(1, 100);
+//    m_progressDialog->setValue(percent);
+//  }
+//
+//private:
+//  std::shared_ptr<QProgressDialog> m_progressDialog;
+//};
+
+//void GeoDataSources::enableProgress() {
+//  auto progressClass = std::make_shared<QtDataSourceProgress>();
+//  for (auto& source : m_height_data_sources_registry->sources()) {
+//    source->setProgressClass(progressClass);
+//  }
+//}
+//void GeoDataSources::disablesProgress() {
+//  for (auto& source : m_height_data_sources_registry->sources()) {
+//    source->setProgressClass(nullptr);
+//  }
+//}

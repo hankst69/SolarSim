@@ -29,8 +29,8 @@ add_library(SolarSimAppLib STATIC
     MainWindow.h
     GeoDataSources.cpp
     GeoDataSources.h
-    GeoHeightDataSources.cpp
-    GeoHeightDataSources.h
+    
+    
 )
 
 if(SOLARSIM_USE_OPENGL)
