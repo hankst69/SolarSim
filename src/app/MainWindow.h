@@ -48,6 +48,8 @@ private slots:
     void onJumpToEnd();
     void onPlaybackTick();
     void onLocalTimeToggled(bool checked);
+    void initScene();
+    void updateScene();
 
 protected:
     void showEvent(QShowEvent* event) override;

@@ -72,21 +72,32 @@ MainWindow::MainWindow(QWidget* parent)
     m_dateEdit->setDate(today);
 
     registerGeoDataSources();
+    //initScene();
+}
+
+void MainWindow::updateScene()
+{
+    rebuildScene();
+    rebuildSunPath();
+    onResetCamera();
+}
+
+void MainWindow::initScene()
+{
+    if (m_sceneInitialized) {
+        return;
+    }
+    m_sceneInitialized = true;
+
+    updateScene();
 }
 
 void MainWindow::showEvent(QShowEvent* event)
 {
     QMainWindow::showEvent(event);
 
-    if (m_sceneInitialized) {
-        return;
-    }
-    m_sceneInitialized = true;
-
-    QTimer::singleShot(0, this, [this]() {
-        rebuildScene();
-        rebuildSunPath();
-        onResetCamera();
+    QTimer::singleShot(200, this, [this]() {
+        initScene();
     });
 }
 
