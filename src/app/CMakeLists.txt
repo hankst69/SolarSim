@@ -75,7 +75,7 @@ if(SOLARSIM_USE_WEBGPU)
     endif()
 endif()
 
-target_link_libraries(SolarSimAppLib PUBLIC geolib)
+target_link_libraries(SolarSimAppLib PUBLIC geolib mongoose)
 
 if(Qt6_FOUND)
     target_link_libraries(SolarSimAppLib PUBLIC Qt6::Widgets Qt6::Network)

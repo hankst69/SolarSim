@@ -23,6 +23,13 @@
 #include <QString>
 #include <QUrl>
 
+extern "C" {
+#include "mongoose.h"
+}
+#include <chrono>
+#include <cstring>
+#include <filesystem>
+#include <fstream>
 
 //GeoDataSources::GeoDataSources() {}
 //GeoDataSources::~GeoDataSources() = default;
@@ -112,7 +119,7 @@ void GeoDataSources::registerDataSources()
 
         geo::BavariaDgm1TileDownloader::FetchFunction byFetch =
             [this](const std::string& url, const std::string& targetPath) -> bool {
-                return fetchUrl(url, targetPath, {}, {});
+                return fetchUrlMongoose(url, targetPath, {}, {});
             };
 
         m_bavariaDgm1TileDownloader = std::make_shared<geo::BavariaDgm1TileDownloader>(byConfig, byFetch);
@@ -133,7 +140,7 @@ void GeoDataSources::registerDataSources()
 
         geo::WorldCopernicusDem30TileDownloader::FetchFunction worldFetch =
             [this](const std::string& url, const std::string& targetPath) -> bool {
-                return fetchUrl(url, targetPath, kCopernicusUserName, kCopernicusPassword);
+                return fetchUrlMongoose(url, targetPath, kCopernicusUserName, kCopernicusPassword);
         };
 
         m_worldDem30TileDownloader = std::make_shared<geo::WorldCopernicusDem30TileDownloader>(worldConfig, worldFetch);
@@ -183,3 +190,132 @@ void GeoDataSources::registerDataSources()
 //    source->setProgressClass(nullptr);
 //  }
 //}
+
+namespace {
+
+struct MgFetchState {
+    std::string url;
+    std::string authHeader;
+    bool done{false};
+    bool gotResponse{false};
+    int status{0};
+    std::string location;
+    std::string body;
+    std::string error;
+};
+
+void mgFetchHandler(mg_connection* c, int ev, void* evData)
+{
+    auto* s = static_cast<MgFetchState*>(c->fn_data);
+    if (ev == MG_EV_CONNECT) {
+        mg_str host = mg_url_host(s->url.c_str());
+        if (mg_url_is_ssl(s->url.c_str())) {
+            mg_tls_opts opts;
+            std::memset(&opts, 0, sizeof(opts));
+            opts.name = host;
+            mg_tls_init(c, &opts);
+        }
+        mg_printf(c,
+                  "GET %s HTTP/1.1\r\n"
+                  "Host: %.*s\r\n"
+                  "User-Agent: SolarSim\r\n"
+                  "%s"
+                  "Connection: close\r\n\r\n",
+                  mg_url_uri(s->url.c_str()), static_cast<int>(host.len), host.buf,
+                  s->authHeader.c_str());
+    } else if (ev == MG_EV_HTTP_MSG) {
+        auto* hm = static_cast<mg_http_message*>(evData);
+        s->gotResponse = true;
+        s->status = mg_http_status(hm);
+        if (mg_str* loc = mg_http_get_header(hm, "Location")) {
+            s->location.assign(loc->buf, loc->len);
+        }
+        s->body.assign(hm->body.buf, hm->body.len);
+        c->is_closing = 1;
+        s->done = true;
+    } else if (ev == MG_EV_ERROR) {
+        s->error = static_cast<const char*>(evData);
+        s->done = true;
+    } else if (ev == MG_EV_CLOSE) {
+        s->done = true;
+    }
+}
+
+} // namespace
+
+bool GeoDataSources::fetchUrlMongoose(const std::string& url, const std::string& targetPath,
+                                      const std::string& userName, const std::string& password)
+{
+    m_progressCount++;
+    progress(m_progressCount, targetPath);
+
+    constexpr int kMaxRedirects = 5;
+    constexpr auto kTimeout = std::chrono::seconds(120);
+
+    MgFetchState state;
+    state.url = url;
+    if (!userName.empty() && !password.empty()) {
+        const QByteArray cred = QByteArray::fromStdString(userName + ':' + password).toBase64();
+        state.authHeader = "Authorization: Basic " + cred.toStdString() + "\r\n";
+    }
+
+    for (int redirects = 0; redirects <= kMaxRedirects; ++redirects) {
+        state.done = false;
+        state.gotResponse = false;
+        state.status = 0;
+        state.location.clear();
+        state.body.clear();
+        state.error.clear();
+
+        mg_mgr mgr;
+        mg_mgr_init(&mgr);
+        mg_connection* c = mg_http_connect(&mgr, state.url.c_str(), mgFetchHandler, &state);
+        if (c == nullptr) {
+            mg_mgr_free(&mgr);
+            return false;
+        }
+
+        const auto deadline = std::chrono::steady_clock::now() + kTimeout;
+        while (!state.done && std::chrono::steady_clock::now() < deadline) {
+            mg_mgr_poll(&mgr, 50);
+        }
+        mg_mgr_free(&mgr);
+
+        if (!state.gotResponse) {
+            return false; // connection error or timeout
+        }
+        if (state.status >= 300 && state.status < 400 && !state.location.empty()) {
+            state.url = state.location; // absolute Location assumed
+            continue;
+        }
+        break;
+    }
+
+    if (!state.gotResponse || state.status != 200) {
+        return false;
+    }
+
+    namespace fs = std::filesystem;
+    const fs::path target(targetPath);
+    std::error_code ec;
+    if (target.has_parent_path()) {
+        fs::create_directories(target.parent_path(), ec);
+    }
+
+    const fs::path tmp = fs::path(targetPath + ".part");
+    {
+        std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
+        out.write(state.body.data(), static_cast<std::streamsize>(state.body.size()));
+        if (!out.good()) {
+            out.close();
+            fs::remove(tmp, ec);
+            return false;
+        }
+    }
+    fs::rename(tmp, target, ec);
+    if (ec) {
+        fs::remove(tmp, ec);
+        return false;
+    }
+    return true;
+}
