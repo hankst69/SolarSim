@@ -23,7 +23,7 @@
         },
         {
           "name": "BUILD_GEOLIB_TESTS",
-          "value": "false",
+          "value": "True",
           "type": "BOOL"
         },
         {

@@ -85,20 +85,22 @@ std::string GeoDataSources::cacheDirectoryFor(const std::string& subDirectory)
 {
     const QString base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
     //return QDir(base).filePath(QString::fromStdString(subDirectory)).toStdString();
-    return QDir(base + "/../").filePath(QString(subDirectory.c_str())).toStdString();
-
-    // attention:
-    // QString::fromStdString() works in tests and Exampke but not in actual Qt Application
-    // for now we use QString(stdstring.c_str()) instead
-    auto dir = QDir(base + "/../");
-    auto relpath = QString(subDirectory.c_str());
-    auto fullpath = dir.filePath(relpath);
-    //https://stackoverflow.com/questions/4214369/how-to-convert-qstring-to-stdstring
-    auto std_text = fullpath.toStdString();
-    auto utf8_text = fullpath.toUtf8().constData();
-    auto current_locale_text = fullpath.toLocal8Bit().constData();
-    auto stdpath = std::string(current_locale_text);
-    return stdpath;
+    const QByteArray utf8 = QDir(base + QStringLiteral("/../"))
+        .filePath(QString::fromUtf8(subDirectory.c_str()))
+        .toUtf8();
+    return std::string(utf8.constData(), static_cast<std::size_t>(utf8.size()));
+    //// attention:
+    //// QString::fromStdString() works in tests and Example but not in actual Qt Application
+    //// for now we use QString(stdstring.c_str()) instead
+    //auto dir = QDir(base + "/../");
+    //auto relpath = QString(subDirectory.c_str());
+    //auto fullpath = dir.filePath(relpath);
+    ////https://stackoverflow.com/questions/4214369/how-to-convert-qstring-to-stdstring
+    //auto std_text = fullpath.toStdString();
+    //auto utf8_text = fullpath.toUtf8().constData();
+    //auto current_locale_text = fullpath.toLocal8Bit().constData();
+    //auto stdpath = std::string(current_locale_text);
+    //return stdpath;
 }
 
 
@@ -106,14 +108,15 @@ void GeoDataSources::registerDataSources()
 {
     if (!m_height_data_sources_registry) {
         m_height_data_sources_registry = &(geo::HeightDataSourceRegistry::instance());
+    }
 
-        for (const auto& source : m_height_data_sources_registry->sources()) {
-            if (source->name().find("DGM1") != std::string::npos ||
-                source->name().find("Copernicus") != std::string::npos) {
-                // Already registered.
-                return;
-            }
+    for (const auto& source : m_height_data_sources_registry->sources()) {
+        if (source->name().find("DGM1") != std::string::npos ||
+            source->name().find("Copernicus") != std::string::npos) {
+            // Already registered.
+            return;
         }
+    }
 
         // register the BavariaDgm1 HeightDataSource
         geo::BavariaDgm1TileDownloader::Config byConfig{};
@@ -153,11 +156,10 @@ void GeoDataSources::registerDataSources()
         m_height_data_sources_registry->addSource(
             std::make_shared<geo::WorldCopernicusDem30HeightDataSource>(m_worldDem30TileDownloader->tileLoader())
         );
-    }
 }
 
 
-// for Qt based DataSource load prgress 
+// for Qt based DataSource load progress 
 //#include <QProgressDialog>
 //class DataSourceProgress : public geo::GeoDataSource::ProgressClass {
 //public:

@@ -171,14 +171,14 @@ void SceneView::updateViewFrame()
     }
 }
 
-void SceneView::drawSunOverlay(QPainter& painter) const
+void SceneView::drawSunOverlay(QPainter& painter)
 {
     if (!m_camera) {
         return;
     }
 
     QVector<QPointF> projectedPath;
-    projectedPath.reserve(static_cast<int>(m_sunPathPoints.size()));
+    //projectedPath.reserve(m_sunPathPoints.size());
 
     for (const geo::Vector3& point : m_sunPathPoints) {
         QPointF screen;
@@ -214,28 +214,6 @@ void SceneView::drawSunOverlay(QPainter& painter) const
             painter.drawEllipse(sunScreen, 5.0, 5.0);
         }
     }
-
-/*
-    m_eye = m_camera->localPosition();
-    m_forward = m_camera->viewDirection();
-
-    // The scene target is the terrain surface below the dome centre.
-    m_target = geo::Vector3{0.0, 0.0, 0.0};
-    if (m_terrain) {
-        double heightM = 0.0;
-        if (m_terrain->heightAt(0.0, 0.0, heightM)) {
-            m_target.z = heightM;
-        }
-    }
-    m_forward = (m_target - m_eye).normalized();
-
-    const geo::Vector3 worldUp{0.0, 0.0, 1.0};
-    m_right = m_forward.cross(worldUp).normalized();
-    if (m_right.length() < 1e-9) {
-        m_right = geo::Vector3{1.0, 0.0, 0.0};
-    }
-    m_up = m_right.cross(m_forward).normalized();
-*/
 }
 
 bool SceneView::projectPoint(const geo::Vector3& local, QPointF& screen, double& depth) const
@@ -325,6 +303,30 @@ void SceneView::paintEvent(QPaintEvent* /*event*/)
         return;
     }
 #endif
+
+    if (!m_camera) {
+        return;
+    }
+
+    m_eye = m_camera->localPosition();
+    m_forward = m_camera->viewDirection();
+
+    // The scene target is the terrain surface below the dome centre.
+    m_target = geo::Vector3{ 0.0, 0.0, 0.0 };
+    if (m_terrain) {
+        double heightM = 0.0;
+        if (m_terrain->heightAt(0.0, 0.0, heightM)) {
+            m_target.z = heightM;
+        }
+    }
+    m_forward = (m_target - m_eye).normalized();
+
+    const geo::Vector3 worldUp{ 0.0, 0.0, 1.0 };
+    m_right = m_forward.cross(worldUp).normalized();
+    if (m_right.length() < 1e-9) {
+        m_right = geo::Vector3{ 1.0, 0.0, 0.0 };
+    }
+    m_up = m_right.cross(m_forward).normalized();
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, false);

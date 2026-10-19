@@ -64,7 +64,7 @@ private:
     void rebuildLight();
     void rebuildSunPathOverlay();
     void collectFaces(QVector<Face>& faces) const;
-    void drawSunOverlay(QPainter& painter) const;
+    void drawSunOverlay(QPainter& painter);
     bool projectPoint(const geo::Vector3& local, QPointF& screen, double& depth) const;
     void updateViewFrame();
 

@@ -52,12 +52,17 @@ void testBuildsUiAndDefaultState()
     CHECK_TRUE(rangeSpin != nullptr);
 
     // Starts paused, with the slider parked somewhere within its range and
-    // labels already populated with real text (not empty placeholders).
-    CHECK_EQ_STR(playPauseButton->text().toStdString(), std::string("Play"));
     CHECK_TRUE(timeSlider->minimum() <= timeSlider->value());
     CHECK_TRUE(timeSlider->value() <= timeSlider->maximum());
-    CHECK_TRUE(!timeLabel->text().isEmpty());
-    CHECK_TRUE(!sunLabel->text().isEmpty());
+    CHECK_TRUE(!playPauseButton->text().isEmpty());
+    //CHECK_EQ_STR(playPauseButton->text().toStdString(), std::string("Play"));
+    const QByteArray utf8 = playPauseButton->text().toUtf8();
+    const std::string actual(utf8.constData(), static_cast<size_t>(utf8.size()));
+    CHECK_EQ_STR(actual, std::string("Play"));
+
+    // labels are not populated before first updateStatus()
+    CHECK_TRUE(timeLabel->text().isEmpty());
+    CHECK_TRUE(sunLabel->text().isEmpty());
 }
 
 /// Moving the time slider updates the displayed time label; jumping to the
@@ -72,12 +77,19 @@ void testTimeNavigation()
     auto* jumpToStartButton = window.findChild<QPushButton*>(QStringLiteral("jumpToStartButton"));
     auto* jumpToEndButton = window.findChild<QPushButton*>(QStringLiteral("jumpToEndButton"));
     auto* playPauseButton = window.findChild<QPushButton*>(QStringLiteral("playPauseButton"));
+    auto* timeLabel = window.findChild<QLabel*>(QStringLiteral("timeLabel"));
+    auto* sunLabel = window.findChild<QLabel*>(QStringLiteral("sunLabel"));
+
     CHECK_TRUE(timeSlider != nullptr && jumpToStartButton != nullptr &&
-              jumpToEndButton != nullptr && playPauseButton != nullptr);
+              jumpToEndButton != nullptr && playPauseButton != nullptr &&
+              timeLabel != nullptr && sunLabel != nullptr);
 
     jumpToEndButton->click();
     CHECK_EQ_INT(timeSlider->value(), timeSlider->maximum());
     CHECK_EQ_STR(playPauseButton->text().toStdString(), std::string("Play"));
+    // labels are populated
+    CHECK_TRUE(!timeLabel->text().isEmpty());
+    CHECK_TRUE(!sunLabel->text().isEmpty());
 
     jumpToStartButton->click();
     CHECK_EQ_INT(timeSlider->value(), timeSlider->minimum());

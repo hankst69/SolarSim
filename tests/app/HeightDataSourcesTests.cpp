@@ -16,10 +16,14 @@ namespace {
 void testRegistersSourcesOnce()
 {
     auto sources = new GeoDataSources();
-    //geo::HeightDataSourceRegistry& registry = sources->heightDataSources();
+    geo::HeightDataSourceRegistry& registry = sources->heightDataSources();
+    //geo::HeightDataSourceRegistry& registry = geo::HeightDataSourceRegistry::instance();
 
-    geo::HeightDataSourceRegistry& registry = geo::HeightDataSourceRegistry::instance();
     registry.clear();
+
+    const std::size_t countBeforeFirstCall = registry.sources().size();
+    CHECK_TRUE(countBeforeFirstCall == 0);
+
     sources->registerDataSources();
     const std::size_t countAfterFirstCall = registry.sources().size();
     CHECK_TRUE(countAfterFirstCall >= 2);

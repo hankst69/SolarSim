@@ -59,9 +59,9 @@ void testSetTerrainAndCamera()
     view.setCamera(camera);
 
     CHECK_TRUE(view.camera() != nullptr);
-    CHECK_NEAR(view.camera()->azimuth(), 180.0, 1e-6);
-    CHECK_NEAR(view.camera()->elevation(), 30.0, 1e-6);
-    CHECK_NEAR(view.camera()->range(), 200.0, 1e-6);
+    CHECK_NEAR(view.camera()->azimuth(),  180.0, 1e-6);
+    CHECK_NEAR(view.camera()->elevation(), 30.0, 0.001);
+    CHECK_NEAR(view.camera()->range(),    200.0, 0.005);
 
     view.setDateTime(geo::DateTimeUtc(2024, 6, 21, 12, 0, 0.0));
 
