@@ -10,6 +10,9 @@
 class GeoDataSources
 {
 public:
+    GeoDataSources();
+    ~GeoDataSources();
+
     void registerDataSources();
     geo::HeightDataSourceRegistry& heightDataSources()   {return *(m_height_data_sources_registry);}
     geo::TextureDataSourceRegistry& textureDataSources() {return *(m_texture_data_sources_registry);}

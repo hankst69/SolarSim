@@ -1,7 +1,8 @@
-#include "HeightDataSources.h"
 
+#include "geolib/HeightDataSource.h"
 #include "geolib/HeightDataSourceRegistry.h"
 
+#include "../app/GeoDataSources.h"
 #include "TestSupport.h"
 
 #include <QCoreApplication>
@@ -14,14 +15,16 @@ namespace {
 /// Copernicus DEM30 sources exactly once, even if called repeatedly.
 void testRegistersSourcesOnce()
 {
+    auto sources = new GeoDataSources();
+    //geo::HeightDataSourceRegistry& registry = sources->heightDataSources();
+
     geo::HeightDataSourceRegistry& registry = geo::HeightDataSourceRegistry::instance();
     registry.clear();
-
-    registerHeightDataSources();
+    sources->registerDataSources();
     const std::size_t countAfterFirstCall = registry.sources().size();
     CHECK_TRUE(countAfterFirstCall >= 2);
 
-    registerHeightDataSources();
+    sources->registerDataSources();
     CHECK_EQ_INT(static_cast<long long>(registry.sources().size()),
                 static_cast<long long>(countAfterFirstCall));
 
@@ -45,7 +48,7 @@ void testRegistersSourcesOnce()
 
 int main(int argc, char* argv[])
 {
-    QCoreApplication app(argc, argv);
+    //QCoreApplication app(argc, argv);
 
     testRegistersSourcesOnce();
 

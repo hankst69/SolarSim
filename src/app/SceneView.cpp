@@ -169,6 +169,7 @@ void SceneView::updateViewFrame()
     if (!m_camera) {
         return;
     }
+}
 
 void SceneView::drawSunOverlay(QPainter& painter) const
 {
@@ -213,8 +214,8 @@ void SceneView::drawSunOverlay(QPainter& painter) const
             painter.drawEllipse(sunScreen, 5.0, 5.0);
         }
     }
-}
 
+/*
     m_eye = m_camera->localPosition();
     m_forward = m_camera->viewDirection();
 
@@ -234,6 +235,7 @@ void SceneView::drawSunOverlay(QPainter& painter) const
         m_right = geo::Vector3{1.0, 0.0, 0.0};
     }
     m_up = m_right.cross(m_forward).normalized();
+*/
 }
 
 bool SceneView::projectPoint(const geo::Vector3& local, QPointF& screen, double& depth) const

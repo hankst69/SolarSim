@@ -31,8 +31,13 @@ extern "C" {
 #include <filesystem>
 #include <fstream>
 
-//GeoDataSources::GeoDataSources() {}
-//GeoDataSources::~GeoDataSources() = default;
+GeoDataSources::GeoDataSources() 
+{
+    m_height_data_sources_registry = &(geo::HeightDataSourceRegistry::instance());
+    //m_texture_data_sources_registry = &(geo::TextureDataSourceRegistry::instance());
+}
+
+GeoDataSources::~GeoDataSources() = default;
 
 
 /// Fetches `url` into the local file `targetPath` using Qt Network. Runs a
