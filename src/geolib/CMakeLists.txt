@@ -37,3 +37,8 @@ add_library(geolib
 )
 
 target_include_directories(geolib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+
+add_library(miniz STATIC ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/miniz/miniz.c)
+target_include_directories(geolib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/miniz)
+target_link_libraries(geolib PRIVATE miniz)

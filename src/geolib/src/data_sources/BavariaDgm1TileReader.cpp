@@ -11,6 +11,11 @@
 #include <string>
 #include <vector>
 
+extern "C" {
+#include "miniz.h"
+}
+
+
 namespace geo {
 namespace {
 
@@ -79,26 +84,20 @@ bool ensureExtractedTxtFile(const std::string& zipPath, std::string& txtPath, st
         }
     }
 
-    const std::string archive = escapeForPowerShellSingleQuotedString(archivePath.string());
-    const std::string output = escapeForPowerShellSingleQuotedString(extractedPath.string());
-    const std::string entryName = escapeForPowerShellSingleQuotedString(extractedPath.filename().string());
+    mz_zip_archive zip;
+    mz_zip_zero_struct(&zip);
+    if (!mz_zip_reader_init_file(&zip, zipPath.c_str(), 0)) {
+        setError(error, "cannot open ZIP archive: " + zipPath);
+        return false;
+    }
 
-#if defined(_WIN32)
-    const std::string command =
-        "powershell -NoProfile -NonInteractive -Command \"Add-Type -AssemblyName "
-        "System.IO.Compression.FileSystem; $archive='" +
-        archive + "'; $output='" + output + "'; $entryName='" + entryName +
-        "'; $zip=[System.IO.Compression.ZipFile]::OpenRead($archive); try { $entry=$zip.Entries | "
-        "Where-Object { $_.Name -ieq $entryName } | Select-Object -First 1; if ($null -eq $entry) "
-        "{ exit 2 }; [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $output, $false) } "
-        "finally { $zip.Dispose() }\"";
-#else
-    const std::string command = "unzip -p '" + escapeForSingleQuotedShell(archivePath.string()) +
-                                "' '" + escapeForSingleQuotedShell(extractedPath.filename().string()) +
-                                "' > '" + escapeForSingleQuotedShell(extractedPath.string()) + "'";
-#endif
-
-    if (std::system(command.c_str()) != 0 || !fs::exists(extractedPath)) {
+    const int index = mz_zip_reader_locate_file(
+        &zip, extractedPath.filename().string().c_str(), nullptr, 0);
+    const bool ok = index >= 0 &&
+        mz_zip_reader_extract_to_file(&zip, static_cast<mz_uint>(index),
+                                      extractedPath.string().c_str(), 0);
+    mz_zip_reader_end(&zip);
+    if (!ok) {
         setError(error, "cannot extract TXT file from ZIP archive: " + zipPath);
         return false;
     }
