@@ -60,11 +60,12 @@ double minutesOfDay(const geo::DateTimeUtc& utc)
 class DataSourceProgress : public geo::GeoDataSource::ProgressClass {
 public:
   DataSourceProgress(QWidget* parent) {
-    m_progressDialog = std::make_shared<QProgressDialog>("Downloading tiles...", QString(), 0, 0, parent);
+    m_progressDialog = std::make_shared<QProgressDialog>("progress...", QString(), 0, 0, parent);
     m_progressDialog->setWindowModality(Qt::WindowModal);
     m_progressDialog->setCancelButton(nullptr);
     m_progressDialog->setMinimumDuration(0);
-    m_progressDialog->setWindowTitle("Loading terrain");
+    m_progressDialog->setWindowTitle("SolarSim");
+    m_progressDialog->setRange(0, 100);
     m_progressDialog->show();
   }
 
@@ -74,8 +75,19 @@ public:
   }
 
   virtual void progress(int percent, std::string msg) {
-    m_progressDialog->setRange(1, 100);
-    m_progressDialog->setValue(percent);
+      if (percent < 1) {
+          m_progressDialog->setValue(0);
+          return;
+      }
+      if (percent > 100) {
+          m_progressDialog->setValue(0);
+          return;
+      }
+      m_progressDialog->setValue(percent);
+      if (msg.empty()) {
+          return;
+      }
+      m_progressDialog->setLabelText(msg.c_str());
   }
 
 private:
@@ -295,7 +307,6 @@ void MainWindow::rebuildScene()
     m_geo_data_sources->setProgressClass(progressClass);
 
     auto heightDataSource = m_geo_data_sources->heightDataSources().selectSource(m_location);
-    //heightDataSource->setProgressClass(progressClass);
 
     const geo::HorizonDome dome = geo::HorizonDome::fromHeightDataSource(m_location, heightDataSource);
 
@@ -307,7 +318,6 @@ void MainWindow::rebuildScene()
     m_terrain = std::make_shared<geo::TerrainModel>(
         dome, heightDataSource, config);
 
-    //heightDataSource->setProgressClass(nullptr);
     m_geo_data_sources->setProgressClass(nullptr);
 
     m_sceneView->setTerrain(m_terrain);
@@ -494,6 +504,7 @@ void MainWindow::onResetCamera()
 
     m_sceneView->setCamera(camera);
     updateCameraControls();
+    updateScene();
 }
 
 void MainWindow::setPlaying(bool playing)

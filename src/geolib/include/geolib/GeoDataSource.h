@@ -69,7 +69,6 @@ public:
         m_progressClass = std::move(progressClass);
     }
 
-protected:
     void progress(int percent, std::string msg) const
     {
         if (m_progressClass) {

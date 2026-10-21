@@ -11,7 +11,7 @@ namespace geo {
 ///
 /// Implementations wrap a concrete data set, e.g. the Bavarian open data
 /// "Digitales Gelaendemodell 1m (DGM1)", SRTM, Copernicus DEM, USGS 3DEP, ...
-class TextureDataSource : GeoDataSource {
+class TextureDataSource : public GeoDataSource {
 public:
     virtual ~TextureDataSource() = default;
 

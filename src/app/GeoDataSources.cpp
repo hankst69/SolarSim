@@ -46,7 +46,7 @@ bool GeoDataSources::fetchUrl(const std::string& url, const std::string& targetP
                 const std::string& userName, const std::string& password)
 {
     m_progressCount++;
-    progress(m_progressCount, targetPath);
+    progress(m_progressCount, "downloadinig " + targetPath);
 
     static QNetworkAccessManager manager;
 
@@ -127,7 +127,8 @@ void GeoDataSources::registerDataSources()
 
         geo::BavariaDgm1TileDownloader::FetchFunction byFetch =
             [this](const std::string& url, const std::string& targetPath) -> bool {
-                return fetchUrlMongoose(url, targetPath, {}, {});
+                //return fetchUrlMongoose(url, targetPath, {}, {});
+                return fetchUrl(url, targetPath, {}, {});
             };
 
         m_bavariaDgm1TileDownloader = std::make_shared<geo::BavariaDgm1TileDownloader>(byConfig, byFetch);
@@ -148,7 +149,8 @@ void GeoDataSources::registerDataSources()
 
         geo::WorldCopernicusDem30TileDownloader::FetchFunction worldFetch =
             [this](const std::string& url, const std::string& targetPath) -> bool {
-                return fetchUrlMongoose(url, targetPath, kCopernicusUserName, kCopernicusPassword);
+                //return fetchUrlMongoose(url, targetPath, kCopernicusUserName, kCopernicusPassword);
+                return fetchUrl(url, targetPath, kCopernicusUserName, kCopernicusPassword);
         };
 
         m_worldDem30TileDownloader = std::make_shared<geo::WorldCopernicusDem30TileDownloader>(worldConfig, worldFetch);
@@ -159,46 +161,16 @@ void GeoDataSources::registerDataSources()
 }
 
 
-// for Qt based DataSource load progress 
-//#include <QProgressDialog>
-//class DataSourceProgress : public geo::GeoDataSource::ProgressClass {
-//public:
-//  DataSourceProgress(QWidget* parent) {
-//    m_progressDialog = std::make_shared<QProgressDialog>("Downloading tiles...", QString(), 0, 0, parent);
-//    m_progressDialog->setWindowModality(Qt::WindowModal);
-//    m_progressDialog->setCancelButton(nullptr);
-//    m_progressDialog->setMinimumDuration(0);
-//    m_progressDialog->setWindowTitle("Loading terrain");
-//    m_progressDialog->show();
-//  }
-//
-//  ~DataSourceProgress() {
-//    m_progressDialog->close();
-//    m_progressDialog = nullptr;
-//  }
-//
-//  virtual void progress(int percent, std::string msg) {
-//    m_progressDialog->setRange(1, 100);
-//    m_progressDialog->setValue(percent);
-//  }
-//
-//private:
-//  std::shared_ptr<QProgressDialog> m_progressDialog;
-//};
-
-//void GeoDataSources::enableProgress() {
-//  auto progressClass = std::make_shared<QtDataSourceProgress>();
-//  for (auto& source : m_height_data_sources_registry->sources()) {
-//    source->setProgressClass(progressClass);
-//  }
-//}
-//void GeoDataSources::disablesProgress() {
-//  for (auto& source : m_height_data_sources_registry->sources()) {
-//    source->setProgressClass(nullptr);
-//  }
-//}
 
 namespace {
+
+// Set log printer function which prints one byte. Example:
+//
+static void console_print_char(char ch, void *param) {
+    //hal_uart_write_char(param, ch);
+    printf("%c", ch);
+}
+//mg_log_set_fn(console_print_char, nullptr);
 
 struct MgFetchState {
     std::string url;
@@ -250,11 +222,14 @@ void mgFetchHandler(mg_connection* c, int ev, void* evData)
 
 } // namespace
 
+
 bool GeoDataSources::fetchUrlMongoose(const std::string& url, const std::string& targetPath,
                                       const std::string& userName, const std::string& password)
 {
+    mg_log_set_fn(console_print_char, nullptr);
+
     m_progressCount++;
-    progress(m_progressCount, targetPath);
+    progress(m_progressCount, "downloadinig " + targetPath);
 
     constexpr int kMaxRedirects = 5;
     constexpr auto kTimeout = std::chrono::seconds(120);

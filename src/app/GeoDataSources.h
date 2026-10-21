@@ -35,7 +35,17 @@ private:
 public:
     void setProgressClass(std::shared_ptr<geo::GeoDataSource::ProgressClass> progressClass)
     {
-        m_progressClass = std::move(progressClass);
+        m_progressClass = progressClass; //std::move(progressClass);
+        if (m_height_data_sources_registry) {
+            for (auto& source : m_height_data_sources_registry->sources()) {
+                source->setProgressClass(progressClass);
+            }
+        }
+        if (m_texture_data_sources_registry) {
+            for (auto& source : m_texture_data_sources_registry->sources()) {
+                source->setProgressClass(progressClass);
+            }
+        }
     }
 protected:
     void progress(int percent, std::string msg) const
