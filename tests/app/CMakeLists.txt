@@ -24,3 +24,6 @@ endfunction()
 add_app_test(HeightDataSourcesTests HeightDataSourcesTests.cpp)
 add_app_test(SceneViewTests SceneViewTests.cpp)
 add_app_test(MainWindowTests MainWindowTests.cpp)
+
+add_app_test(MongooseTests MongooseTests.cpp)
+target_link_libraries(MongooseTests PRIVATE mongoose)

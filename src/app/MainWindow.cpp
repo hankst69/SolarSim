@@ -174,6 +174,7 @@ void MainWindow::buildUi()
 
     m_localTimeCheckBox = new QCheckBox(tr("Display local time"), timeBox);
     m_localTimeCheckBox->setObjectName(QStringLiteral("localTimeCheckBox"));
+    m_localTimeCheckBox->setChecked(true);
     dateLayout->addWidget(m_localTimeCheckBox);
 
     dateLayout->addStretch(1);
@@ -504,7 +505,7 @@ void MainWindow::onResetCamera()
 
     m_sceneView->setCamera(camera);
     updateCameraControls();
-    updateScene();
+    //updateScene();
 }
 
 void MainWindow::setPlaying(bool playing)

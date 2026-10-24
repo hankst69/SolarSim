@@ -61,9 +61,11 @@ BavariaDgm1TileDownloader::BavariaDgm1TileDownloader(Config config, FetchFunctio
 {
 }
 
-std::string BavariaDgm1TileDownloader::fileNameFor(const TileKey& key) const
+std::string BavariaDgm1TileDownloader::fileNameFor(const TileKey& key, bool dataFileName) const
 {
-    //return "dgm1_32_" + std::to_string(key.eastKm) + "_" + std::to_string(key.northKm) + "_1_by" + m_config.fileExtension;
+    if (dataFileName) {
+        return std::to_string(key.eastKm) + "_" + std::to_string(key.northKm) + ".txt";
+    }
     return std::to_string(key.eastKm) + "_" + std::to_string(key.northKm) + m_config.fileExtension;
 }
 
@@ -76,14 +78,18 @@ std::string BavariaDgm1TileDownloader::urlFor(const TileKey& key) const
     return base + "/" + fileNameFor(key);
 }
 
-std::string BavariaDgm1TileDownloader::cachePathFor(const TileKey& key) const
+std::string BavariaDgm1TileDownloader::cachePathFor(const TileKey& key, bool dataFileName) const
 {
-    return joinPath(m_config.cacheDirectory, fileNameFor(key));
+    return joinPath(m_config.cacheDirectory, fileNameFor(key, dataFileName));
 }
 
 bool BavariaDgm1TileDownloader::ensureLocalFile(const TileKey& key, std::string& localPath,
                                                 std::string* error) const
 {
+    auto localPathData = cachePathFor(key, true);
+    if (fileExists(localPathData)) {
+        return true;
+    }
     localPath = cachePathFor(key);
     if (fileExists(localPath)) {
         return true;
