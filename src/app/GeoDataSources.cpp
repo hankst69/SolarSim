@@ -118,46 +118,46 @@ void GeoDataSources::registerDataSources()
         }
     }
 
-        // register the BavariaDgm1 HeightDataSource
-        geo::BavariaDgm1TileDownloader::Config byConfig{};
-        byConfig.cacheDirectory = cacheDirectoryFor("height_data_cache/bavaria_dgm1");
-        byConfig.baseUrl = "https://download1.bayernwolke.de/a/dgm/dgm1xyz";
-        byConfig.fileExtension = ".zip";
-        byConfig.allowDownload = true;
+    // register the BavariaDgm1 HeightDataSource
+    geo::BavariaDgm1TileDownloader::Config byConfig{};
+    byConfig.cacheDirectory = cacheDirectoryFor("height_data_cache/bavaria_dgm1");
+    byConfig.baseUrl = "https://download1.bayernwolke.de/a/dgm/dgm1xyz";
+    byConfig.fileExtension = ".zip";
+    byConfig.allowDownload = true;
 
-        geo::BavariaDgm1TileDownloader::FetchFunction byFetch =
-            [this](const std::string& url, const std::string& targetPath) -> bool {
-                //return fetchUrlMongoose(url, targetPath, {}, {});
-                return fetchUrl(url, targetPath, {}, {});
-            };
-
-        m_bavariaDgm1TileDownloader = std::make_shared<geo::BavariaDgm1TileDownloader>(byConfig, byFetch);
-
-        m_height_data_sources_registry->addSource(
-            std::make_shared<geo::BavariaDgm1HeightDataSource>(m_bavariaDgm1TileDownloader->tileLoader())
-        );
-
-        // register the WorldCopernicusDem30 HeightDataSource
-        geo::WorldCopernicusDem30TileDownloader::Config worldConfig{};
-        worldConfig.cacheDirectory = cacheDirectoryFor("height_data_cache/world_copernicus_dem30");
-        worldConfig.baseUrl = "https://copernicus-dem-30m.s3.amazonaws.com";
-        worldConfig.fileExtension = ".hgt";
-        worldConfig.allowDownload = true;
-
-        static const std::string kCopernicusUserName = "";
-        static const std::string kCopernicusPassword = "";
-
-        geo::WorldCopernicusDem30TileDownloader::FetchFunction worldFetch =
-            [this](const std::string& url, const std::string& targetPath) -> bool {
-                //return fetchUrlMongoose(url, targetPath, kCopernicusUserName, kCopernicusPassword);
-                return fetchUrl(url, targetPath, kCopernicusUserName, kCopernicusPassword);
+    geo::BavariaDgm1TileDownloader::FetchFunction byFetch =
+        [this](const std::string& url, const std::string& targetPath) -> bool {
+            return fetchUrlMongoose(url, targetPath, {}, {});
+            //return fetchUrl(url, targetPath, {}, {});
         };
 
-        m_worldDem30TileDownloader = std::make_shared<geo::WorldCopernicusDem30TileDownloader>(worldConfig, worldFetch);
+    m_bavariaDgm1TileDownloader = std::make_shared<geo::BavariaDgm1TileDownloader>(byConfig, byFetch);
 
-        m_height_data_sources_registry->addSource(
-            std::make_shared<geo::WorldCopernicusDem30HeightDataSource>(m_worldDem30TileDownloader->tileLoader())
-        );
+    m_height_data_sources_registry->addSource(
+        std::make_shared<geo::BavariaDgm1HeightDataSource>(m_bavariaDgm1TileDownloader->tileLoader())
+    );
+
+    // register the WorldCopernicusDem30 HeightDataSource
+    geo::WorldCopernicusDem30TileDownloader::Config worldConfig{};
+    worldConfig.cacheDirectory = cacheDirectoryFor("height_data_cache/world_copernicus_dem30");
+    worldConfig.baseUrl = "https://copernicus-dem-30m.s3.amazonaws.com";
+    worldConfig.fileExtension = ".hgt";
+    worldConfig.allowDownload = true;
+
+    static const std::string kCopernicusUserName = "";
+    static const std::string kCopernicusPassword = "";
+
+    geo::WorldCopernicusDem30TileDownloader::FetchFunction worldFetch =
+        [this](const std::string& url, const std::string& targetPath) -> bool {
+            return fetchUrlMongoose(url, targetPath, kCopernicusUserName, kCopernicusPassword);
+            //return fetchUrl(url, targetPath, kCopernicusUserName, kCopernicusPassword);
+    };
+
+    m_worldDem30TileDownloader = std::make_shared<geo::WorldCopernicusDem30TileDownloader>(worldConfig, worldFetch);
+
+    m_height_data_sources_registry->addSource(
+        std::make_shared<geo::WorldCopernicusDem30HeightDataSource>(m_worldDem30TileDownloader->tileLoader())
+    );
 }
 
 
@@ -183,11 +183,61 @@ struct MgFetchState {
     std::string error;
 };
 
+std::string resolveRedirect(const std::string& baseUrl, const std::string& location)
+{
+    if (location.empty() || location.find("://") != std::string::npos) {
+        return location;
+    }
+
+    const std::size_t schemeEnd = baseUrl.find("://");
+    const std::size_t authorityEnd = schemeEnd == std::string::npos
+        ? std::string::npos
+        : baseUrl.find('/', schemeEnd + 3);
+    if (schemeEnd == std::string::npos || authorityEnd == std::string::npos) {
+        return location;
+    }
+
+    const std::string origin = baseUrl.substr(0, authorityEnd);
+    if (location.rfind("//", 0) == 0) {
+        return baseUrl.substr(0, schemeEnd) + ":" + location;
+    }
+    if (location.front() == '/') {
+        return origin + location;
+    }
+
+    const std::string currentUri = mg_url_uri(baseUrl.c_str());
+    const std::size_t lastSlash = currentUri.rfind('/');
+    return origin + (lastSlash == std::string::npos ? "/" : currentUri.substr(0, lastSlash + 1)) + location;
+}
+
+bool sameOrigin(const std::string& first, const std::string& second)
+{
+    if (mg_url_is_ssl(first.c_str()) != mg_url_is_ssl(second.c_str()) ||
+        mg_url_port(first.c_str()) != mg_url_port(second.c_str())) {
+        return false;
+    }
+
+    const mg_str firstHost = mg_url_host(first.c_str());
+    const mg_str secondHost = mg_url_host(second.c_str());
+    return firstHost.len == secondHost.len &&
+        std::strncmp(firstHost.buf, secondHost.buf, firstHost.len) == 0;
+}
+
 void mgFetchHandler(mg_connection* c, int ev, void* evData)
 {
     auto* s = static_cast<MgFetchState*>(c->fn_data);
     if (ev == MG_EV_CONNECT) {
+        if (evData != nullptr && *static_cast<int*>(evData) != 0) {
+            s->done = true;
+            return;
+        }
         mg_str host = mg_url_host(s->url.c_str());
+        std::string hostHeader(host.buf, host.len);
+        const unsigned short port = mg_url_port(s->url.c_str());
+        const unsigned short defaultPort = mg_url_is_ssl(s->url.c_str()) ? 443 : 80;
+        if (port != 0 && port != defaultPort) {
+            hostHeader += ':' + std::to_string(port);
+        }
         if (mg_url_is_ssl(s->url.c_str())) {
             mg_tls_opts opts;
             std::memset(&opts, 0, sizeof(opts));
@@ -196,11 +246,11 @@ void mgFetchHandler(mg_connection* c, int ev, void* evData)
         }
         mg_printf(c,
                   "GET %s HTTP/1.1\r\n"
-                  "Host: %.*s\r\n"
+                  "Host: %s\r\n"
                   "User-Agent: SolarSim\r\n"
                   "%s"
                   "Connection: close\r\n\r\n",
-                  mg_url_uri(s->url.c_str()), static_cast<int>(host.len), host.buf,
+                  mg_url_uri(s->url.c_str()), hostHeader.c_str(),
                   s->authHeader.c_str());
     } else if (ev == MG_EV_HTTP_MSG) {
         auto* hm = static_cast<mg_http_message*>(evData);
@@ -213,7 +263,9 @@ void mgFetchHandler(mg_connection* c, int ev, void* evData)
         c->is_closing = 1;
         s->done = true;
     } else if (ev == MG_EV_ERROR) {
-        s->error = static_cast<const char*>(evData);
+        if (evData != nullptr) {
+            s->error = static_cast<const char*>(evData);
+        }
         s->done = true;
     } else if (ev == MG_EV_CLOSE) {
         s->done = true;
@@ -267,7 +319,14 @@ bool GeoDataSources::fetchUrlMongoose(const std::string& url, const std::string&
             return false; // connection error or timeout
         }
         if (state.status >= 300 && state.status < 400 && !state.location.empty()) {
-            state.url = state.location; // absolute Location assumed
+            const std::string nextUrl = resolveRedirect(state.url, state.location);
+            if (nextUrl.empty() || nextUrl.find("://") == std::string::npos) {
+                return false;
+            }
+            if (!sameOrigin(state.url, nextUrl)) {
+                state.authHeader.clear();
+            }
+            state.url = nextUrl;
             continue;
         }
         break;
@@ -282,6 +341,9 @@ bool GeoDataSources::fetchUrlMongoose(const std::string& url, const std::string&
     std::error_code ec;
     if (target.has_parent_path()) {
         fs::create_directories(target.parent_path(), ec);
+        if (ec) {
+            return false;
+        }
     }
 
     const fs::path tmp = fs::path(targetPath + ".part");
@@ -293,6 +355,11 @@ bool GeoDataSources::fetchUrlMongoose(const std::string& url, const std::string&
             fs::remove(tmp, ec);
             return false;
         }
+    }
+    const bool targetExists = fs::exists(target, ec);
+    if (ec || (targetExists && !fs::remove(target, ec)) || ec) {
+        fs::remove(tmp, ec);
+        return false;
     }
     fs::rename(tmp, target, ec);
     if (ec) {
