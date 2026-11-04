@@ -53,7 +53,7 @@ void TerrainModel::sampleHeights()
                 continue;
             }
 
-            m_source->progress(row * column * 100 / (m_samples * m_samples), "sample heights...");
+            m_source->progress(100 * (row * m_samples + column) / (m_samples * m_samples), "sample heights...");
             const GeoLocation location = plane.toGeoLocation(Vector3{east, north, 0.0});
             double altitude = 0.0;
             if (!m_source->sampleHeight(location.latitude(), location.longitude(), altitude)) {
