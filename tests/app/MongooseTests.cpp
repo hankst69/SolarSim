@@ -119,38 +119,6 @@ namespace {
         else if (ev == MG_EV_ERROR) {
             if (evData != nullptr) {
                 s->error = static_cast<const char*>(evData);
-                //>>> "https://github.com/cesanta/mongoose/issues/1420"
-                printf("Received MG_EV_ERROR with evData='%s'\n", s->error.c_str());
-                if (s->error == "TLS error alert") //if (strncmp(s->error.c_str(), "TLS error 40", 12) == 0) 
-                {
-                    printf("Re-initialize the connection after receiving 'TLS error 40'\n");
-                    // Re-initialize the connection. Optionally, keep reconnection cound in c->label
-                    mg_iobuf_free(&c->send);
-                    mg_iobuf_free(&c->recv);
-                    //... clear other flags ..
-                    c->is_closing = 0;  // Clear error
-                    c->is_resolving = 1;
-                    mg_tls_opts opts;
-                    std::memset(&opts, 0, sizeof(opts));
-                    if (mg_url_is_ssl(s->url.c_str())) {
-                        mg_str host = mg_url_host(s->url.c_str());
-                        opts.name = host;
-                        std::string host_str(host.buf, host.len);
-                        printf("Re-initialize SSL connection for host='%s'\n", host_str.c_str());
-                    }
-                    mg_tls_init(c, &opts);
-                    //return;
-
-                    ////SSL_clear(tls->ssl)
-                    //mg_tls_free(c);
-                    //CCORSConnCtx* ctx = reinterpret_cast<CCORSConnCtx*>(c->fn_data);
-                    //mg_tls_opts* opts = ctx->getClientTLSOpts();
-                    //opts->srvname = mg_str("");
-                    //c->is_resolving = 1;
-                    //mg_tls_init(c, opts);
-                    //tls = (struct mg_tls*)c->tls;
-                }
-                //<<< "https://github.com/cesanta/mongoose/issues/1420"
             }
             s->done = true;
         }
