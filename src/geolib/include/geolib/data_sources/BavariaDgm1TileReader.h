@@ -30,6 +30,9 @@ public:
 
     static bool readAsciiGrid(std::istream& stream, Utm32GridTile& tile,
                               std::string* error = nullptr);
+
+    static bool ensureExtractedFile(const std::string& zipPath, std::string& datPath, std::string* error);
 };
+
 
 } // namespace geo

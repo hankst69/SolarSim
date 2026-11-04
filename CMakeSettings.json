@@ -91,7 +91,14 @@
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
-      "ctestCommandArgs": ""
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "SOLARSIM_USE_OPENGL",
+          "value": "True",
+          "type": "BOOL"
+        }
+      ]
     },
     {
       "name": "Mingw64-Release",

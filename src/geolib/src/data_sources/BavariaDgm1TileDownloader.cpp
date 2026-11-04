@@ -86,28 +86,31 @@ std::string BavariaDgm1TileDownloader::cachePathFor(const TileKey& key, bool dat
 bool BavariaDgm1TileDownloader::ensureLocalFile(const TileKey& key, std::string& localPath,
                                                 std::string* error) const
 {
-    auto localPathData = cachePathFor(key, true);
-    if (fileExists(localPathData)) {
-        return true;
-    }
-    localPath = cachePathFor(key);
+    localPath = cachePathFor(key, true);
     if (fileExists(localPath)) {
         return true;
     }
-    if (!m_config.allowDownload || !m_fetch) {
+
+    auto localPathDwnloadFile = cachePathFor(key);
+    if (!fileExists(localPathDwnloadFile) && (!m_config.allowDownload || !m_fetch)) {
         setError(error, "tile " + key.toString() + " not cached and downloading is disabled");
         return false;
     }
 
     createDirectory(m_config.cacheDirectory);
-    if (!m_fetch(urlFor(key), localPath)) {
+    if (!m_fetch(urlFor(key), localPathDwnloadFile)) {
         setError(error, "download failed for tile " + key.toString());
         return false;
     }
-    if (!fileExists(localPath)) {
-        setError(error, "download reported success but file is missing: " + localPath);
+    if (!fileExists(localPathDwnloadFile)) {
+        setError(error, "download reported success but file is missing: " + localPathDwnloadFile);
         return false;
     }
+
+    if (!BavariaDgm1TileReader::ensureExtractedFile(localPathDwnloadFile, localPath, error)) {
+        return false;
+    }
+
     return true;
 }
 

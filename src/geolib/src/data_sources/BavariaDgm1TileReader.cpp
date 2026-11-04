@@ -61,12 +61,22 @@ std::string escapeForPowerShellSingleQuotedString(const std::string& value)
     return escaped;
 }
 
-bool ensureExtractedTxtFile(const std::string& zipPath, std::string& txtPath, std::string* error)
+bool ensureExtractedTxtFile(const std::string& archivePath, std::string& txtPath, std::string* error)
 {
     namespace fs = std::filesystem;
 
-    fs::path archivePath(zipPath);
-    fs::path extractedPath = archivePath;
+    const std::size_t dot = archivePath.find_last_of('.');
+    const std::string extension = (dot == std::string::npos) 
+        ? std::string() : toLower(archivePath.substr(dot));
+
+    if (extension != ".zip") {
+        // not an archive -> just return as it is
+        txtPath = archivePath;
+        return fs::exists(fs::path(txtPath));
+    }
+
+    // prepare extraction - define data file path
+    fs::path extractedPath(archivePath);
     extractedPath.replace_extension(".txt");
     txtPath = extractedPath.string();
 
@@ -86,8 +96,8 @@ bool ensureExtractedTxtFile(const std::string& zipPath, std::string& txtPath, st
 
     mz_zip_archive zip;
     mz_zip_zero_struct(&zip);
-    if (!mz_zip_reader_init_file(&zip, zipPath.c_str(), 0)) {
-        setError(error, "cannot open ZIP archive: " + zipPath);
+    if (!mz_zip_reader_init_file(&zip, archivePath.c_str(), 0)) {
+        setError(error, "cannot open ZIP archive: " + archivePath);
         return false;
     }
 
@@ -98,7 +108,7 @@ bool ensureExtractedTxtFile(const std::string& zipPath, std::string& txtPath, st
                                       extractedPath.string().c_str(), 0);
     mz_zip_reader_end(&zip);
     if (!ok) {
-        setError(error, "cannot extract TXT file from ZIP archive: " + zipPath);
+        setError(error, "cannot extract TXT file from ZIP archive: " + archivePath);
         return false;
     }
 
@@ -120,6 +130,11 @@ double deriveSpacing(std::vector<double> values)
 }
 
 } // namespace
+
+bool BavariaDgm1TileReader::ensureExtractedFile(const std::string& zipPath, std::string& datPath, std::string* error)
+{
+    return geo::ensureExtractedTxtFile(zipPath, datPath, error);
+}
 
 bool BavariaDgm1TileReader::readXyz(std::istream& stream, Utm32GridTile& tile, std::string* error)
 {
