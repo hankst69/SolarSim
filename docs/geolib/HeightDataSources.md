@@ -73,7 +73,8 @@ an already populated local tile directory.
 
 BavariaDgm1TileDownloader::Config config;
 config.cacheDirectory = "C:/data/dgm1";
-config.fileExtension = ".xyz";
+config.downloadFileExtension = ".xyz";
+config.dataFileExtension = ".xyz";
 
 static BavariaDgm1TileDownloader downloader(config,
     [](const std::string& url, const std::string& target) {

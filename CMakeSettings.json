@@ -94,8 +94,28 @@
       "ctestCommandArgs": "",
       "variables": [
         {
-          "name": "SOLARSIM_USE_OPENGL",
+          "name": "BUILD_SOLARSIM_APP",
+          "value": "true",
+          "type": "BOOL"
+        },
+        {
+          "name": "BUILD_GEOLIB_EXAMPLES",
+          "value": "false",
+          "type": "BOOL"
+        },
+        {
+          "name": "BUILD_GEOLIB_TESTS",
           "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "SOLARSIM_USE_WEBGPU",
+          "value": "false",
+          "type": "BOOL"
+        },
+        {
+          "name": "SOLARSIM_USE_OPENGL",
+          "value": "false",
           "type": "BOOL"
         }
       ]

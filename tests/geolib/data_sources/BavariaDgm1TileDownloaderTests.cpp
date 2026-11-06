@@ -47,7 +47,8 @@ BavariaDgm1TileDownloader::Config makeConfig()
     BavariaDgm1TileDownloader::Config config;
     config.cacheDirectory = kCacheDir;
     config.baseUrl = "https://example.invalid/dgm1";
-    config.fileExtension = ".xyz";
+    config.downloadFileExtension = ".xyz";
+    config.dataFileExtension = ".xyz";
     return config;
 }
 

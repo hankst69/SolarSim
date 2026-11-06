@@ -19,6 +19,9 @@ namespace geo {
 ///
 /// Tiles are named after the south west corner of their 1 km square in UTM32,
 /// e.g. `690_5334` -> `dgm1_32_690_5334_1_by.tif` / `..._by.xyz`.
+/// https://geodaten.bayern.de/opengeodata/OpenDataDetail.html?pn=dgm1
+/// https://download1.bayernwolke.de/a/dgm/dgm1/654_5492.tif
+/// https://download1.bayernwolke.de/a/dgm/dgm1xyz/655_5492.zip
 class BavariaDgm1TileDownloader {
 public:
     using TileKey = BavariaDgm1HeightDataSource::TileKey;
@@ -34,7 +37,9 @@ public:
         /// Base URL of the open data tile server (without trailing slash).
         std::string baseUrl{"https://download1.bayernwolke.de/a/dgm/dgm1"};
         /// File extension of the tiles to request.
-        std::string fileExtension{".tif"};
+        std::string downloadFileExtension{".tif"};
+        /// File extension of the tiles data.
+        std::string dataFileExtension{".tif"};
         /// Allow downloading missing tiles. If false only the cache is used.
         bool allowDownload{true};
     };
@@ -44,13 +49,15 @@ public:
     const Config& config() const { return m_config; }
 
     /// Official file name of a tile, e.g. "654_5491.zip" resp. "654_5491.txt" (for the uncompressed data file).
-    std::string fileNameFor(const TileKey& key, bool dataFileName = false) const;
+    std::string fileNameFor(const TileKey& key) const;
+    std::string downloadFileNameFor(const TileKey& key) const;
+
+    /// Path of the tile inside the local cache directory.
+    std::string cachePathFor(const TileKey& key) const;
+    std::string cachePathForDownload(const TileKey& key) const;
 
     /// Full download URL of a tile.
     std::string urlFor(const TileKey& key) const;
-
-    /// Path of the tile inside the local cache directory.
-    std::string cachePathFor(const TileKey& key, bool dataFileName = false) const;
 
     /// Ensures the tile file exists locally, downloading it if necessary.
     /// Returns false if it is neither cached nor downloadable.

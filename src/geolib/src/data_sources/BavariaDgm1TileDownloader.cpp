@@ -61,12 +61,14 @@ BavariaDgm1TileDownloader::BavariaDgm1TileDownloader(Config config, FetchFunctio
 {
 }
 
-std::string BavariaDgm1TileDownloader::fileNameFor(const TileKey& key, bool dataFileName) const
+std::string BavariaDgm1TileDownloader::fileNameFor(const TileKey& key) const
 {
-    if (dataFileName) {
-        return std::to_string(key.eastKm) + "_" + std::to_string(key.northKm) + ".txt";
-    }
-    return std::to_string(key.eastKm) + "_" + std::to_string(key.northKm) + m_config.fileExtension;
+    return std::to_string(key.eastKm) + "_" + std::to_string(key.northKm) + m_config.dataFileExtension;
+}
+
+std::string BavariaDgm1TileDownloader::downloadFileNameFor(const TileKey& key) const
+{
+    return std::to_string(key.eastKm) + "_" + std::to_string(key.northKm) + m_config.downloadFileExtension;
 }
 
 std::string BavariaDgm1TileDownloader::urlFor(const TileKey& key) const
@@ -75,23 +77,28 @@ std::string BavariaDgm1TileDownloader::urlFor(const TileKey& key) const
     if (!base.empty() && base.back() == '/') {
         base.pop_back();
     }
-    return base + "/" + fileNameFor(key);
+    return base + "/" + downloadFileNameFor(key);
 }
 
-std::string BavariaDgm1TileDownloader::cachePathFor(const TileKey& key, bool dataFileName) const
+std::string BavariaDgm1TileDownloader::cachePathFor(const TileKey& key) const
 {
-    return joinPath(m_config.cacheDirectory, fileNameFor(key, dataFileName));
+    return joinPath(m_config.cacheDirectory, fileNameFor(key));
+}
+
+std::string BavariaDgm1TileDownloader::cachePathForDownload(const TileKey& key) const
+{
+    return joinPath(m_config.cacheDirectory, downloadFileNameFor(key));
 }
 
 bool BavariaDgm1TileDownloader::ensureLocalFile(const TileKey& key, std::string& localPath,
                                                 std::string* error) const
 {
-    localPath = cachePathFor(key, true);
+    localPath = cachePathFor(key);
     if (fileExists(localPath)) {
         return true;
     }
 
-    auto localPathDwnloadFile = cachePathFor(key);
+    auto localPathDwnloadFile = cachePathForDownload(key);
     if (!fileExists(localPathDwnloadFile) && (!m_config.allowDownload || !m_fetch)) {
         setError(error, "tile " + key.toString() + " not cached and downloading is disabled");
         return false;

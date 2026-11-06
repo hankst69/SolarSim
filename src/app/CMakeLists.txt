@@ -29,8 +29,8 @@ add_library(SolarSimAppLib STATIC
     MainWindow.h
     GeoDataSources.cpp
     GeoDataSources.h
-    
-    
+    SceneView.cpp
+    SceneView.h    
 )
 
 if(SOLARSIM_USE_OPENGL)
@@ -44,8 +44,8 @@ if(SOLARSIM_USE_OPENGL)
         find_package(Qt5 5.12 COMPONENTS OpenGL REQUIRED)
         target_link_libraries(SolarSimAppLib PUBLIC Qt5::OpenGL)
     endif()
-else()
-    target_sources(SolarSimAppLib PRIVATE SceneView.cpp SceneView.h)
+#else()
+#    target_sources(SolarSimAppLib PRIVATE SceneView.cpp SceneView.h)
 endif()
 
 if(SOLARSIM_USE_WEBGPU)

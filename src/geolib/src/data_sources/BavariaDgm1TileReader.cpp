@@ -61,25 +61,38 @@ std::string escapeForPowerShellSingleQuotedString(const std::string& value)
     return escaped;
 }
 
-bool ensureExtractedTxtFile(const std::string& archivePath, std::string& txtPath, std::string* error)
+bool ensureExtractedFile(const std::string& archivePath, std::string& datPath, std::string* error, bool deleteArchive = false)
 {
     namespace fs = std::filesystem;
+
+    if (!datPath.empty() && datPath == archivePath) {
+        namespace fs = std::filesystem;
+        return fs::exists(fs::path(datPath));
+    }
 
     const std::size_t dot = archivePath.find_last_of('.');
     const std::string extension = (dot == std::string::npos) 
         ? std::string() : toLower(archivePath.substr(dot));
 
     if (extension != ".zip") {
-        // not an archive -> just return as it is
-        txtPath = archivePath;
-        return fs::exists(fs::path(txtPath));
+        // not a zip archive -> just return as it is
+        if (datPath.empty()) {
+            datPath = archivePath;
+        }
+        return fs::exists(fs::path(datPath));
     }
 
     // prepare extraction - define data file path
     fs::path extractedPath(archivePath);
-    extractedPath.replace_extension(".txt");
-    txtPath = extractedPath.string();
+    if (datPath.empty()) {
+        extractedPath.replace_extension(".txt");
+        datPath = extractedPath.string();
+    }
+    else {
+        extractedPath = fs::path(datPath);
+    }
 
+    // validate existence of data file
     if (fs::exists(extractedPath)) {
         return true;
     }
@@ -112,6 +125,14 @@ bool ensureExtractedTxtFile(const std::string& archivePath, std::string& txtPath
         return false;
     }
 
+    if (deleteArchive) {
+        std::error_code ec;
+        if (!fs::remove(fs::path(archivePath), ec)) {
+            setError(error, "delete archive file failed with error: " + std::to_string(ec.value()));
+            //setError(error, std::format("delete archive file failed with error: {}", ec.value()));
+        }
+    }
+
     return true;
 }
 
@@ -133,7 +154,7 @@ double deriveSpacing(std::vector<double> values)
 
 bool BavariaDgm1TileReader::ensureExtractedFile(const std::string& zipPath, std::string& datPath, std::string* error)
 {
-    return geo::ensureExtractedTxtFile(zipPath, datPath, error);
+    return geo::ensureExtractedFile(zipPath, datPath, error, /*deleteArchive */ true);
 }
 
 bool BavariaDgm1TileReader::readXyz(std::istream& stream, Utm32GridTile& tile, std::string* error)
@@ -293,7 +314,7 @@ bool BavariaDgm1TileReader::readFile(const std::string& path, Utm32GridTile& til
 
     std::string resolvedPath = path;
     if (extension == ".zip") {
-        if (!ensureExtractedTxtFile(path, resolvedPath, error)) {
+        if (!ensureExtractedFile(path, resolvedPath, error)) {
             return false;
         }
     }

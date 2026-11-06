@@ -122,7 +122,8 @@ void GeoDataSources::registerDataSources()
     geo::BavariaDgm1TileDownloader::Config byConfig{};
     byConfig.cacheDirectory = cacheDirectoryFor("height_data_cache/bavaria_dgm1");
     byConfig.baseUrl = "https://download1.bayernwolke.de/a/dgm/dgm1xyz";
-    byConfig.fileExtension = ".zip";
+    byConfig.downloadFileExtension = ".zip";
+    byConfig.dataFileExtension = ".txt";
     byConfig.allowDownload = true;
 
     geo::BavariaDgm1TileDownloader::FetchFunction byFetch =

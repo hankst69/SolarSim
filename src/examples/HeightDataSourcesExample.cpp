@@ -300,7 +300,8 @@ int main()
     geo::BavariaDgm1TileDownloader::Config bavariaConfig;
     bavariaConfig.cacheDirectory = (cacheRoot / "bavaria_dgm1").string();
     bavariaConfig.baseUrl = "https://download1.bayernwolke.de/a/dgm/dgm1xyz";
-    bavariaConfig.fileExtension = ".zip";
+    bavariaConfig.downloadFileExtension = ".zip";
+    bavariaConfig.dataFileExtension = ".txt";
     bavariaConfig.allowDownload = true;
 
     geo::BavariaDgm1TileDownloader bavariaDownloader(
