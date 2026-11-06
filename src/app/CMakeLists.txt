@@ -31,6 +31,7 @@ add_library(SolarSimAppLib STATIC
     GeoDataSources.h
     SceneView.cpp
     SceneView.h    
+    ProgressDisplay.h    
 )
 
 if(SOLARSIM_USE_OPENGL)

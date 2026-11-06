@@ -1,9 +1,11 @@
 #include "MainWindow.h"
 
+#include "ProgressDisplay.h"
 #include "GeoDataSources.h"
-#if !defined(SOLARSIM_USE_OPENGL)
+//#if !defined(SOLARSIM_USE_OPENGL)
 #include "SceneView.h"
-#endif
+//#endif
+
 
 #include "geolib/CameraPosition.h"
 #include "geolib/GridHeightDataSource.h"
@@ -20,7 +22,6 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QProgressDialog>
 #include <QPushButton>
 #include <QSlider>
 #include <QStatusBar>
@@ -29,7 +30,7 @@
 
 #include <cmath>
 
-namespace {
+namespace appconfig {
 
 /// Start location of the application, taken from the README example.
 constexpr double kHomeLatitudeDeg = 49.56255;
@@ -57,49 +58,12 @@ double minutesOfDay(const geo::DateTimeUtc& utc)
     return utc.hour * 60.0 + utc.minute + utc.second / 60.0;
 }
 
-class DataSourceProgress : public geo::GeoDataSource::ProgressClass {
-public:
-  DataSourceProgress(QWidget* parent) {
-    m_progressDialog = std::make_shared<QProgressDialog>("progress...", QString(), 0, 0, parent);
-    m_progressDialog->setWindowModality(Qt::WindowModal);
-    m_progressDialog->setCancelButton(nullptr);
-    m_progressDialog->setMinimumDuration(0);
-    m_progressDialog->setWindowTitle("SolarSim");
-    m_progressDialog->setRange(0, 100);
-    m_progressDialog->show();
-  }
-
-  ~DataSourceProgress() {
-    m_progressDialog->close();
-    m_progressDialog = nullptr;
-  }
-
-  virtual void progress(int percent, std::string msg) {
-      if (percent < 1) {
-          m_progressDialog->setValue(0);
-          return;
-      }
-      if (percent > 100) {
-          m_progressDialog->setValue(0);
-          return;
-      }
-      m_progressDialog->setValue(percent);
-      if (msg.empty()) {
-          return;
-      }
-      m_progressDialog->setLabelText(msg.c_str());
-  }
-
-private:
-  std::shared_ptr<QProgressDialog> m_progressDialog;
-};
-
 } // namespace
 
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
-    , m_location(kHomeLatitudeDeg, kHomeLongitudeDeg)
+    , m_location(appconfig::kHomeLatitudeDeg, appconfig::kHomeLongitudeDeg)
 {
     buildUi();
 
@@ -145,7 +109,7 @@ MainWindow::~MainWindow() = default;
 void MainWindow::registerGeoDataSources()
 {
     if (!m_geo_data_sources) {
-        m_geo_data_sources = new GeoDataSources();
+        m_geo_data_sources = new app::GeoDataSources();
     }
     m_geo_data_sources->registerDataSources();
 }
@@ -294,7 +258,7 @@ void MainWindow::buildUi()
     connect(m_sceneView, &SceneViewWidget::cameraChanged, this, &MainWindow::onCameraChangedByView);
 
     m_playTimer = new QTimer(this);
-    m_playTimer->setInterval(kPlaybackTickIntervalMs);
+    m_playTimer->setInterval(appconfig::kPlaybackTickIntervalMs);
     connect(m_playTimer, &QTimer::timeout, this, &MainWindow::onPlaybackTick);
     connect(m_playPauseButton, &QPushButton::clicked, this, &MainWindow::onPlayPauseClicked);
     connect(m_jumpToStartButton, &QPushButton::clicked, this, &MainWindow::onJumpToStart);
@@ -304,24 +268,29 @@ void MainWindow::buildUi()
 
 void MainWindow::rebuildScene()
 {
-    auto progressClass = std::make_shared<DataSourceProgress>(this);
+    auto progressClass = std::make_shared<app::ProgressDisplay>(this);
+
     m_geo_data_sources->setProgressClass(progressClass);
+    {
+        auto heightDataSource = m_geo_data_sources->heightDataSources().selectSource(m_location);
 
-    auto heightDataSource = m_geo_data_sources->heightDataSources().selectSource(m_location);
+        const geo::HorizonDome dome = geo::HorizonDome::fromHeightDataSource(m_location, heightDataSource);
 
-    const geo::HorizonDome dome = geo::HorizonDome::fromHeightDataSource(m_location, heightDataSource);
+        geo::TerrainModel::Config config;
+        config.extentM = appconfig::kSceneExtentM;
+        config.gridSpacingM = appconfig::kSceneGridSpacingM;
+        config.clipToDomeCircle = true;
 
-    geo::TerrainModel::Config config;
-    config.extentM = kSceneExtentM;
-    config.gridSpacingM = kSceneGridSpacingM;
-    config.clipToDomeCircle = true;
-
-    m_terrain = std::make_shared<geo::TerrainModel>(
-        dome, heightDataSource, config);
-
+        m_terrain = std::make_shared<geo::TerrainModel>(
+            dome, heightDataSource, config);
+    }
     m_geo_data_sources->setProgressClass(nullptr);
 
-    m_sceneView->setTerrain(m_terrain);
+    m_sceneView->setProgressClass(progressClass);
+    {
+        m_sceneView->setTerrain(m_terrain);
+    }
+    m_sceneView->setProgressClass(nullptr);
 }
 
 void MainWindow::rebuildSunPath()
@@ -344,8 +313,8 @@ void MainWindow::rebuildSunPath()
         m_sunriseUtc = rise;
         m_sunsetUtc = set;
         m_hasSunriseSunset = true;
-        m_dayStartMinutes = minutesOfDay(rise);
-        m_dayEndMinutes = minutesOfDay(set);
+        m_dayStartMinutes = appconfig::minutesOfDay(rise);
+        m_dayEndMinutes = appconfig::minutesOfDay(set);
     } else {
         m_hasSunriseSunset = false;
         m_dayStartMinutes = 0.0;
@@ -356,7 +325,7 @@ void MainWindow::rebuildSunPath()
     }
 
     const int steps =
-        static_cast<int>(std::lround((m_dayEndMinutes - m_dayStartMinutes) * kSliderStepsPerMinute));
+        static_cast<int>(std::lround((m_dayEndMinutes - m_dayStartMinutes) * appconfig::kSliderStepsPerMinute));
 
     const bool wasUpdating = m_updatingControls;
     m_updatingControls = true;
@@ -365,7 +334,7 @@ void MainWindow::rebuildSunPath()
     m_updatingControls = wasUpdating;
 
     // Playback runs from sunrise to sunset in roughly kPlaybackDurationMs.
-    const double ticks = kPlaybackDurationMs / kPlaybackTickIntervalMs;
+    const double ticks = appconfig::kPlaybackDurationMs / appconfig::kPlaybackTickIntervalMs;
     m_playStepPerTick = std::max(1.0, m_timeSlider->maximum() / ticks);
 
     updateSunriseSunsetLabels();
@@ -376,7 +345,7 @@ geo::DateTimeUtc MainWindow::timeForSlider(int value) const
 {
     const QDate date = m_dateEdit->date();
 
-    double minutes = m_dayStartMinutes + static_cast<double>(value) / kSliderStepsPerMinute;
+    double minutes = m_dayStartMinutes + static_cast<double>(value) / appconfig::kSliderStepsPerMinute;
     minutes = std::min(minutes, m_dayEndMinutes);
 
     const int hour = static_cast<int>(minutes / 60.0);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "geolib/ProgressClass.h"
 #include "geolib/CameraPosition.h"
 #include "geolib/DateTimeUtc.h"
 #include "geolib/SunPath.h"
@@ -88,4 +89,22 @@ private:
     std::unique_ptr<GpuSceneRenderer> m_gpuRenderer;
     bool m_gpuInitialized{false};
 #endif
+
+
+public:
+    void setProgressClass(geo::ProgressClassPtr progressClass)
+    {
+        m_progressClass = progressClass;
+    }
+protected:
+    void progress(int percent, std::string msg) const
+    {
+        if (m_progressClass) {
+            int progressVal = percent % 100;
+            m_progressClass->progress(progressVal, std::move(msg));
+        }
+    }
+private:
+    geo::ProgressClassPtr m_progressClass;
+    int m_progressCount{ 0 };
 };

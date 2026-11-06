@@ -7,6 +7,8 @@
 #include "geolib/data_sources/BavariaDgm1TileDownloader.h"
 #include "geolib/data_sources/WorldCopernicusDem30TileDownloader.h"
 
+namespace app {
+
 class GeoDataSources
 {
 public:
@@ -33,7 +35,7 @@ private:
     std::shared_ptr<geo::WorldCopernicusDem30TileDownloader> m_worldDem30TileDownloader{ nullptr };
 
 public:
-    void setProgressClass(std::shared_ptr<geo::GeoDataSource::ProgressClass> progressClass)
+    void setProgressClass(geo::ProgressClassPtr progressClass)
     {
         m_progressClass = progressClass; //std::move(progressClass);
         if (m_height_data_sources_registry) {
@@ -56,6 +58,8 @@ protected:
         }
     }
 private:
-    std::shared_ptr<geo::GeoDataSource::ProgressClass> m_progressClass;
+    geo::ProgressClassPtr m_progressClass;
     int m_progressCount{0};
 };
+
+} // namespace

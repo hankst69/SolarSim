@@ -67,7 +67,7 @@ private:
     geo::DateTimeUtc timeForSlider(int value) const;
     void setPlaying(bool playing);
 
-    GeoDataSources* m_geo_data_sources{nullptr};
+    app::GeoDataSources* m_geo_data_sources{nullptr};
 
     geo::GeoLocation m_location;
     std::shared_ptr<geo::TerrainModel> m_terrain;

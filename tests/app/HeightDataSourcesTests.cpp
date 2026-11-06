@@ -15,7 +15,7 @@ namespace {
 /// Copernicus DEM30 sources exactly once, even if called repeatedly.
 void testRegistersSourcesOnce()
 {
-    auto sources = new GeoDataSources();
+    auto sources = new app::GeoDataSources();
     geo::HeightDataSourceRegistry& registry = sources->heightDataSources();
     //geo::HeightDataSourceRegistry& registry = geo::HeightDataSourceRegistry::instance();
 

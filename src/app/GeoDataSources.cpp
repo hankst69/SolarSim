@@ -23,13 +23,17 @@
 #include <QString>
 #include <QUrl>
 
+// for Mongoose based fetchUrl implementation
 extern "C" {
 #include "mongoose.h"
 }
+
 #include <chrono>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+
+namespace app {
 
 GeoDataSources::GeoDataSources() 
 {
@@ -369,3 +373,5 @@ bool GeoDataSources::fetchUrlMongoose(const std::string& url, const std::string&
     }
     return true;
 }
+
+} //namespace

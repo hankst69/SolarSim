@@ -1,5 +1,6 @@
 #pragma once
 
+#include "geolib/ProgressClass.h"
 #include "geolib/GeoLocation.h"
 
 #include <memory>
@@ -35,12 +36,6 @@ struct GeoBounds {
 ///
 class GeoDataSource {
 public:
-    class ProgressClass {
-    public:
-        virtual ~ProgressClass() = default;
-        virtual void progress(int percent, std::string msg) = 0;
-    };
-
     virtual ~GeoDataSource() = default;
 
     /// Human readable name of the data set, used for logging and selection
