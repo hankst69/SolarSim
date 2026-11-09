@@ -69,11 +69,7 @@ namespace {
 
     void mgFetchHandler(mg_connection* c, int ev, void* evData)
     {
-        std::string evData_stdstr;
-        if (evData != nullptr) {
-            evData_stdstr = static_cast<const char*>(evData);
-        }
-        printf("mgFetchHandler()... mg_connection='%x' ev='%i' evData='%x', evData_str='%s'\n", c, ev, evData, evData_stdstr.c_str());
+        printf("mgFetchHandler()... mg_connection='%p' ev='%i' evData='%p'\n", static_cast<void*>(c), ev, evData);
 
         auto* s = static_cast<MgFetchState*>(c->fn_data);
         if (ev == MG_EV_CONNECT) {
@@ -96,12 +92,10 @@ namespace {
             }
             mg_printf(c,
                 "GET %s HTTP/1.1\r\n"
-                "Host: %.*s\r\n"
                 "Host: %s\r\n"
                 "User-Agent: SolarSim\r\n"
                 "%s"
                 "Connection: close\r\n\r\n",
-                mg_url_uri(s->url.c_str()), static_cast<int>(host.len), host.buf,
                 mg_url_uri(s->url.c_str()), hostHeader.c_str(),
                 s->authHeader.c_str());
         }
