@@ -1,5 +1,6 @@
 #pragma once
 
+#include "geolib/ProgressClass.h"
 #include "geolib/CameraPosition.h"
 #include "geolib/DateTimeUtc.h"
 #include "geolib/SunPath.h"
@@ -92,4 +93,22 @@ private:
     bool m_hasCurrentSunPoint{false};
 
     QPoint m_lastMousePos;
+
+
+public:
+    void setProgressClass(geo::ProgressClassPtr progressClass)
+    {
+        m_progressClass = progressClass;
+    }
+protected:
+    void progress(int percent, std::string msg) const
+    {
+        if (m_progressClass) {
+            int progressVal = percent % 100;
+            m_progressClass->progress(progressVal, std::move(msg));
+        }
+    }
+private:
+    geo::ProgressClassPtr m_progressClass;
+    int m_progressCount{ 0 };
 };
