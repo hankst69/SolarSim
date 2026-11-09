@@ -48,6 +48,7 @@ private slots:
     void onJumpToEnd();
     void onPlaybackTick();
     void onLocalTimeToggled(bool checked);
+    void onShadowsToggled(bool checked);
     void initScene();
     void updateScene();
 
@@ -80,6 +81,7 @@ private:
     SceneViewWidget* m_sceneView{nullptr};
     QDateEdit* m_dateEdit{nullptr};
     QCheckBox* m_localTimeCheckBox{nullptr};
+    QCheckBox* m_shadowsCheckBox{nullptr};
     QSlider* m_timeSlider{nullptr};
     QLabel* m_timeLabel{nullptr};
     QLabel* m_sunriseTimeLabel{nullptr};

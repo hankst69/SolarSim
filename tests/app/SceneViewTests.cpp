@@ -34,11 +34,13 @@ namespace {
     }
 
     /// A freshly constructed view has no camera and no terrain, and must not
-    /// crash when asked to render.
+    /// crash when asked to render. Shadow simulation defaults to off so the
+    /// initial preview is cheap.
     void testInitialStateIsEmpty()
     {
         SceneView view;
         CHECK_TRUE(view.camera() == nullptr);
+        CHECK_TRUE(view.shadowsEnabled() == false);
 
         view.resize(320, 240);
         view.repaint();
@@ -69,6 +71,34 @@ namespace {
         view.repaint();
     }
 
+    /// setShadowsEnabled() toggles the expensive full lighting simulation on
+    /// top of the cheap preview shading; both states must render without
+    /// crashing and the accessor must reflect the last value set.
+    void testSetShadowsEnabled()
+    {
+        SceneView view;
+        view.resize(320, 240);
+
+        const std::shared_ptr<geo::TerrainModel> terrain = makeTerrain();
+        view.setTerrain(terrain);
+
+        const geo::CameraPosition camera =
+            geo::CameraPosition::fromOrbit(terrain->dome(), 180.0, 30.0, 200.0);
+        view.setCamera(camera);
+        view.setDateTime(geo::DateTimeUtc(2024, 6, 21, 12, 0, 0.0));
+
+        CHECK_TRUE(view.shadowsEnabled() == false);
+        view.repaint();
+
+        view.setShadowsEnabled(true);
+        CHECK_TRUE(view.shadowsEnabled() == true);
+        view.repaint();
+
+        view.setShadowsEnabled(false);
+        CHECK_TRUE(view.shadowsEnabled() == false);
+        view.repaint();
+    }
+
 } // namespace
 
 
@@ -78,6 +108,7 @@ int main(int argc, char* argv[])
 
     testInitialStateIsEmpty();
     testSetTerrainAndCamera();
+    testSetShadowsEnabled();
 
     return geotest::summarize("SceneViewTests");
 }

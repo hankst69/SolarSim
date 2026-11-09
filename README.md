@@ -140,7 +140,10 @@ the current date:
   `HeightDataSource` covering it (the flat fallback if nothing else is
   registered).
 - Lighting combines a weak ambient/sky term with the `SunLight` of the current
-  time, including terrain cast shadows from `TerrainModel::isInShadow()`.
+  time. By default a cheap sun-facing preview shading is used, so panning the
+  camera and scrubbing the date/time slider stay interactive; the terrain cast
+  shadow raycast (`TerrainModel::isInShadow()`) is only computed per-triangle
+  when the **"Simulate shadows (slow)"** checkbox is enabled.
 - The **time slider** scrolls from sunrise to sunset of the selected date, both
   taken from `SunPath`. The date can be changed with the date picker.
 - The **camera** is a `CameraPosition` orbiting the standpoint: drag with the

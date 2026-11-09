@@ -141,6 +141,11 @@ void MainWindow::buildUi()
     m_localTimeCheckBox->setChecked(true);
     dateLayout->addWidget(m_localTimeCheckBox);
 
+    m_shadowsCheckBox = new QCheckBox(tr("Simulate shadows (slow)"), timeBox);
+    m_shadowsCheckBox->setObjectName(QStringLiteral("shadowsCheckBox"));
+    m_shadowsCheckBox->setChecked(false);
+    dateLayout->addWidget(m_shadowsCheckBox);
+
     dateLayout->addStretch(1);
     timeLayout->addLayout(dateLayout);
 
@@ -264,6 +269,14 @@ void MainWindow::buildUi()
     connect(m_jumpToStartButton, &QPushButton::clicked, this, &MainWindow::onJumpToStart);
     connect(m_jumpToEndButton, &QPushButton::clicked, this, &MainWindow::onJumpToEnd);
     connect(m_localTimeCheckBox, &QCheckBox::toggled, this, &MainWindow::onLocalTimeToggled);
+    connect(m_shadowsCheckBox, &QCheckBox::toggled, this, &MainWindow::onShadowsToggled);
+}
+
+void MainWindow::onShadowsToggled(bool checked)
+{
+    if (m_sceneView) {
+        m_sceneView->setShadowsEnabled(checked);
+    }
 }
 
 void MainWindow::rebuildScene()

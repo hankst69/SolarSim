@@ -78,6 +78,7 @@ void SceneView::setTerrain(std::shared_ptr<const geo::TerrainModel> terrain)
     m_terrain = std::move(terrain);
     rebuildLight();
     rebuildSunPathOverlay();
+    m_shadingDirty = true;
 
 #if defined(SOLARSIM_USE_WEBGPU)
     if (!m_gpuInitialized && m_gpuRenderer) {
@@ -98,6 +99,7 @@ void SceneView::setDateTime(const geo::DateTimeUtc& utc)
     m_utc = utc;
     rebuildLight();
     rebuildSunPathOverlay();
+    m_shadingDirty = true;
 
 #if defined(SOLARSIM_USE_WEBGPU)
     if (m_gpuInitialized) {
@@ -105,6 +107,16 @@ void SceneView::setDateTime(const geo::DateTimeUtc& utc)
     }
 #endif
 
+    update();
+}
+
+void SceneView::setShadowsEnabled(bool enabled)
+{
+    if (m_shadowsEnabled == enabled) {
+        return;
+    }
+    m_shadowsEnabled = enabled;
+    m_shadingDirty = true;
     update();
 }
 
@@ -236,8 +248,15 @@ bool SceneView::projectPoint(const geo::Vector3& local, QPointF& screen, double&
     return true;
 }
 
-void SceneView::collectFaces(QVector<Face>& faces) const
+void SceneView::rebuildShading()
 {
+    m_faceShadeColors.clear();
+    m_shadingDirty = false;
+
+    if (!m_terrain) {
+        return;
+    }
+
     const geo::TriangleMesh& mesh = m_terrain->sceneMesh();
     const std::vector<geo::Vector3>& vertices = mesh.vertices();
 
@@ -245,23 +264,12 @@ void SceneView::collectFaces(QVector<Face>& faces) const
     const geo::Vector3 toSun = m_light ? m_light->directionToSun() : geo::Vector3{0.0, 0.0, 1.0};
     const double sunIntensity = m_light ? m_light->intensity() : 0.0;
 
-    faces.reserve(static_cast<int>(mesh.triangles().size()));
+    m_faceShadeColors.reserve(mesh.triangles().size());
 
     for (const geo::TriangleMesh::Triangle& tri : mesh.triangles()) {
         const geo::Vector3& a = vertices[tri.a];
         const geo::Vector3& b = vertices[tri.b];
         const geo::Vector3& c = vertices[tri.c];
-
-        Face face;
-        double depthA = 0.0;
-        double depthB = 0.0;
-        double depthC = 0.0;
-        if (!projectPoint(a, face.screen[0], depthA) ||
-            !projectPoint(b, face.screen[1], depthB) ||
-            !projectPoint(c, face.screen[2], depthC)) {
-            continue;
-        }
-        face.depth = (depthA + depthB + depthC) / 3.0;
 
         geo::Vector3 normal = (b - a).cross(c - a).normalized();
         if (normal.z < 0.0) {
@@ -275,19 +283,60 @@ void SceneView::collectFaces(QVector<Face>& faces) const
         if (sunUp) {
             const double lambert = clamp01(normal.dot(toSun));
             if (lambert > 0.0) {
-                const geo::Vector3 centre = (a + b + c) / 3.0;
-                if (!m_terrain->isInShadow(centre, toSun)) {
+                // The terrain shadow raycast (isInShadow) is by far the most
+                // expensive part of shading a frame. Only pay for it when the
+                // user explicitly asked for the full lighting simulation;
+                // otherwise show a cheap sun-facing preview.
+                bool inShadow = false;
+                if (m_shadowsEnabled) {
+                    const geo::Vector3 centre = (a + b + c) / 3.0;
+                    inShadow = m_terrain->isInShadow(centre, toSun);
+                }
+                if (!inShadow) {
                     shade += kSunDiffuse * lambert * clamp01(sunIntensity + 0.25);
                 }
             }
         }
 
         shade = clamp01(shade);
-        face.color = QColor::fromRgbF(kTerrainColor.redF() * shade,
-                                      kTerrainColor.greenF() * shade,
-                                      kTerrainColor.blueF() * shade);
+        m_faceShadeColors.push_back(QColor::fromRgbF(kTerrainColor.redF() * shade,
+                                                      kTerrainColor.greenF() * shade,
+                                                      kTerrainColor.blueF() * shade));
+    }
+}
+
+void SceneView::collectFaces(QVector<Face>& faces)
+{
+    if (m_shadingDirty) {
+        rebuildShading();
+    }
+
+    const geo::TriangleMesh& mesh = m_terrain->sceneMesh();
+    const std::vector<geo::Vector3>& vertices = mesh.vertices();
+
+    faces.reserve(static_cast<int>(mesh.triangles().size()));
+
+    std::size_t idx = 0;
+    for (const geo::TriangleMesh::Triangle& tri : mesh.triangles()) {
+        const geo::Vector3& a = vertices[tri.a];
+        const geo::Vector3& b = vertices[tri.b];
+        const geo::Vector3& c = vertices[tri.c];
+
+        Face face;
+        double depthA = 0.0;
+        double depthB = 0.0;
+        double depthC = 0.0;
+        if (!projectPoint(a, face.screen[0], depthA) ||
+            !projectPoint(b, face.screen[1], depthB) ||
+            !projectPoint(c, face.screen[2], depthC)) {
+            ++idx;
+            continue;
+        }
+        face.depth = (depthA + depthB + depthC) / 3.0;
+        face.color = m_faceShadeColors[idx];
         face.visible = true;
         faces.push_back(face);
+        ++idx;
     }
 
     // Painter's algorithm: draw the far triangles first.

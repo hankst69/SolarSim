@@ -24,10 +24,13 @@
 /// here, unlike the WebGPU backend (GpuSceneRenderer).
 ///
 /// Like GpuSceneRenderer, the CPU still computes per-triangle shading (the
-/// sun/shadow lighting model of SunLight/TerrainModel::isInShadow()); the GPU
-/// only does the projection, rasterization and depth testing, which is far
-/// faster than the painter's-algorithm software rasterizer used by SceneView
-/// for larger meshes.
+/// sun lighting model of SunLight); the GPU only does the projection,
+/// rasterization and depth testing, which is far faster than the
+/// painter's-algorithm software rasterizer used by SceneView for larger
+/// meshes. The terrain cast shadow raycast (TerrainModel::isInShadow()) is by
+/// far the most expensive part of shading a frame, so it is only evaluated
+/// when setShadowsEnabled(true) is set; by default a cheap sun-facing preview
+/// shading is used instead, keeping date/time changes interactive.
 class GLSceneView : public QOpenGLWidget, protected QOpenGLFunctions {
     Q_OBJECT
 
@@ -38,8 +41,10 @@ public:
     void setTerrain(std::shared_ptr<const geo::TerrainModel> terrain);
     void setDateTime(const geo::DateTimeUtc& utc);
     void setCamera(const geo::CameraPosition& camera);
+    void setShadowsEnabled(bool enabled);
 
     const geo::CameraPosition* camera() const { return m_camera.get(); }
+    bool shadowsEnabled() const { return m_shadowsEnabled; }
 
 signals:
     void cameraChanged();
@@ -80,6 +85,7 @@ private:
     bool m_geometryDirty{true};
     bool m_overlayDirty{true};
     bool m_glInitialized{false};
+    bool m_shadowsEnabled{false};
 
     std::vector<geo::Vector3> m_sunPathPoints;
     geo::Vector3 m_currentSunPoint;

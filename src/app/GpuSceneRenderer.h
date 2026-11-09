@@ -19,11 +19,15 @@
 /// Emscripten, so the acceleration is independent of the underlying OS
 /// graphics API (Vulkan/Metal/D3D12 natively, or the browser's own backend).
 ///
-/// The renderer keeps the CPU side sun/shadow lighting model of SunLight (a
-/// full GPU shadow map is out of scope for now) but bakes the resulting
-/// per-vertex shade into a vertex buffer and lets the GPU do the projection,
+/// The renderer keeps the CPU side sun lighting model of SunLight (a full GPU
+/// shadow map is out of scope for now) but bakes the resulting per-vertex
+/// shade into a vertex buffer and lets the GPU do the projection,
 /// rasterization and depth testing, which is dramatically faster than the
-/// painter's-algorithm software rasterizer for larger meshes.
+/// painter's-algorithm software rasterizer for larger meshes. The terrain
+/// cast shadow raycast (TerrainModel::isInShadow()) is by far the most
+/// expensive part of shading a frame, so it is only evaluated when
+/// setShadowsEnabled(true) is set; by default a cheap sun-facing preview
+/// shading is used instead, keeping date/time changes interactive.
 class GpuSceneRenderer {
 public:
     GpuSceneRenderer();
@@ -43,6 +47,7 @@ public:
     void setTerrain(std::shared_ptr<const geo::TerrainModel> terrain);
     void setDateTime(const geo::DateTimeUtc& utc);
     void setCamera(const geo::CameraPosition& camera);
+    void setShadowsEnabled(bool enabled);
 
     bool isValid() const { return m_device != nullptr; }
 
@@ -83,6 +88,7 @@ private:
     std::uint32_t m_height{1};
     bool m_geometryDirty{true};
     bool m_overlayDirty{true};
+    bool m_shadowsEnabled{false};
     std::uint32_t m_vertexCount{0};
     std::uint32_t m_overlayVertexCount{0};
 

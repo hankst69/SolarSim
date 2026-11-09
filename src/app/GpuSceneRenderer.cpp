@@ -405,6 +405,15 @@ void GpuSceneRenderer::setCamera(const geo::CameraPosition& camera)
     m_camera = std::make_unique<geo::CameraPosition>(camera);
 }
 
+void GpuSceneRenderer::setShadowsEnabled(bool enabled)
+{
+    if (m_shadowsEnabled == enabled) {
+        return;
+    }
+    m_shadowsEnabled = enabled;
+    m_geometryDirty = true;
+}
+
 void GpuSceneRenderer::rebuildLight()
 {
     if (!m_terrain) {
@@ -484,8 +493,12 @@ void GpuSceneRenderer::uploadGeometryIfDirty()
         if (sunUp) {
             const double lambert = clamp01(normal.dot(toSun));
             if (lambert > 0.0) {
-                const geo::Vector3 centre = (a + b + c) / 3.0;
-                if (!m_terrain->isInShadow(centre, toSun)) {
+                bool inShadow = false;
+                if (m_shadowsEnabled) {
+                    const geo::Vector3 centre = (a + b + c) / 3.0;
+                    inShadow = m_terrain->isInShadow(centre, toSun);
+                }
+                if (!inShadow) {
                     shade += kSunDiffuse * lambert * clamp01(sunIntensity + 0.25);
                 }
             }

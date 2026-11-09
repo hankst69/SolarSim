@@ -30,8 +30,11 @@ class QPainter;
 /// WebGPU API (GpuSceneRenderer), which works identically on desktop (native
 /// WebGPU via wgpu-native/Dawn) and in a WebAssembly build running in a
 /// browser. Shading combines a weak ambient/diffuse base light with the
-/// directional geo::SunLight of the current date/time, including terrain
-/// cast shadows.
+/// directional geo::SunLight of the current date/time. Terrain cast shadows
+/// (geo::TerrainModel::isInShadow()) are expensive to evaluate and are only
+/// computed when setShadowsEnabled(true) is set; by default a cheap
+/// sun-facing preview shading is used so camera/date/time interaction stays
+/// smooth.
 class SceneView : public QWidget {
     Q_OBJECT
 
@@ -41,8 +44,10 @@ public:
     void setTerrain(std::shared_ptr<const geo::TerrainModel> terrain);
     void setDateTime(const geo::DateTimeUtc& utc);
     void setCamera(const geo::CameraPosition& camera);
+    void setShadowsEnabled(bool enabled);
 
     const geo::CameraPosition* camera() const { return m_camera.get(); }
+    bool shadowsEnabled() const { return m_shadowsEnabled; }
 
 signals:
     void cameraChanged();
@@ -64,7 +69,8 @@ private:
 
     void rebuildLight();
     void rebuildSunPathOverlay();
-    void collectFaces(QVector<Face>& faces) const;
+    void rebuildShading();
+    void collectFaces(QVector<Face>& faces);
     void drawSunOverlay(QPainter& painter);
     bool projectPoint(const geo::Vector3& local, QPointF& screen, double& depth) const;
     void updateViewFrame();
@@ -82,6 +88,13 @@ private:
     std::vector<geo::Vector3> m_sunPathPoints;
     geo::Vector3 m_currentSunPoint;
     bool m_hasCurrentSunPoint{false};
+
+    // Per-triangle shading cache: colour of each triangle in mesh.triangles()
+    // order. Recomputed only when terrain/time/shadow mode changes, not on
+    // every paint.
+    std::vector<QColor> m_faceShadeColors;
+    bool m_shadingDirty{true};
+    bool m_shadowsEnabled{false};
 
     QPoint m_lastMousePos;
 

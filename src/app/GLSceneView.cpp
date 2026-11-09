@@ -185,6 +185,15 @@ void GLSceneView::setCamera(const geo::CameraPosition& camera)
     update();
 }
 
+void GLSceneView::setShadowsEnabled(bool enabled)
+{
+    if (m_shadowsEnabled == enabled) {
+        return;
+    }
+    m_shadowsEnabled = enabled;
+    rebuildGeometry();
+}
+
 void GLSceneView::uploadGeometryIfNeeded()
 {
     if (!m_geometryDirty || !m_glInitialized || !m_terrain) {
@@ -216,8 +225,12 @@ void GLSceneView::uploadGeometryIfNeeded()
         if (sunUp) {
             const double lambert = clamp01(normal.dot(toSun));
             if (lambert > 0.0) {
-                const geo::Vector3 centre = (a + b + c) / 3.0;
-                if (!m_terrain->isInShadow(centre, toSun)) {
+                bool inShadow = false;
+                if (m_shadowsEnabled) {
+                    const geo::Vector3 centre = (a + b + c) / 3.0;
+                    inShadow = m_terrain->isInShadow(centre, toSun);
+                }
+                if (!inShadow) {
                     shade += kSunDiffuse * lambert * clamp01(sunIntensity + 0.25);
                 }
             }
