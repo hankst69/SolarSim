@@ -22,10 +22,6 @@ public:
     bool fetchUrl(const std::string& url, const std::string& targetPath,
                   const std::string& userName, const std::string& password);
 
-    /// Qt-independent alternative based on Mongoose. Blocking, thread-safe, no event loop.
-    bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
-                          const std::string& userName, const std::string& password);
-
     std::string cacheDirectoryFor(const std::string& subDirectory);
 
 private:

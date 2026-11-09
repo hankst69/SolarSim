@@ -29,6 +29,8 @@ add_library(SolarSimAppLib STATIC
     MainWindow.h
     GeoDataSources.cpp
     GeoDataSources.h
+    MongooseFetch.cpp
+    MongooseFetch.h
     SceneView.cpp
     SceneView.h    
     ProgressDisplay.h    
