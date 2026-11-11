@@ -1,5 +1,4 @@
 #include "GLSceneView.h"
-#include "GLSceneView.h"
 
 #include <QMouseEvent>
 #include <QWheelEvent>
@@ -14,7 +13,9 @@ constexpr double kAmbient = 0.18;
 constexpr double kSkyFill = 0.12;
 constexpr double kSunDiffuse = 0.85;
 constexpr float kTerrainColor[3] = {126.0f / 255.0f, 138.0f / 255.0f, 104.0f / 255.0f};
-constexpr float kSunOverlayColor[3] = {0.0f, 0.0f, 0.0f};
+constexpr float kSunPathColor[3] = {0.0f, 0.0f, 0.0f};
+
+constexpr float kSunMarkerColor[3] = { 255.0f / 255.0f, 240.0f / 255.0f, 170.0f / 255.0f };
 constexpr int kSunPathSampleCount = 144;
 
 double clamp01(double value)
@@ -286,9 +287,9 @@ void GLSceneView::uploadSunOverlayIfNeeded()
         vertex.position[0] = static_cast<float>(point.x);
         vertex.position[1] = static_cast<float>(point.y);
         vertex.position[2] = static_cast<float>(point.z);
-        vertex.color[0] = kSunOverlayColor[0];
-        vertex.color[1] = kSunOverlayColor[1];
-        vertex.color[2] = kSunOverlayColor[2];
+        vertex.color[0] = kSunPathColor[0];
+        vertex.color[1] = kSunPathColor[1];
+        vertex.color[2] = kSunPathColor[2];
         overlayVertices.push_back(vertex);
     }
 
@@ -301,7 +302,7 @@ void GLSceneView::uploadSunOverlayIfNeeded()
         tangentU = tangentU.normalized();
         const geo::Vector3 tangentV = normal.cross(tangentU).normalized();
 
-        const double markerSizeM = std::clamp(m_terrain->dome().radius() * 0.005, 2.0, 30.0);
+        const double markerSizeM = std::clamp(m_terrain->dome().radius() * 0.005, 99.0, 499.0);
         const geo::Vector3 p0 = m_currentSunPoint - tangentU * markerSizeM;
         const geo::Vector3 p1 = m_currentSunPoint + tangentU * markerSizeM;
         const geo::Vector3 p2 = m_currentSunPoint - tangentV * markerSizeM;
@@ -312,9 +313,9 @@ void GLSceneView::uploadSunOverlayIfNeeded()
             vertex.position[0] = static_cast<float>(p.x);
             vertex.position[1] = static_cast<float>(p.y);
             vertex.position[2] = static_cast<float>(p.z);
-            vertex.color[0] = kSunOverlayColor[0];
-            vertex.color[1] = kSunOverlayColor[1];
-            vertex.color[2] = kSunOverlayColor[2];
+            vertex.color[0] = kSunMarkerColor[0];
+            vertex.color[1] = kSunMarkerColor[1];
+            vertex.color[2] = kSunMarkerColor[2];
             overlayVertices.push_back(vertex);
         }
     }
