@@ -1,4 +1,4 @@
-#include "SceneView.h"
+#include "SceneViewCPU.h"
 
 #include "geolib/CameraPosition.h"
 #include "geolib/DateTimeUtc.h"
@@ -38,7 +38,7 @@ namespace {
     /// initial preview is cheap.
     void testInitialStateIsEmpty()
     {
-        SceneView view;
+        SceneViewCPU view;
         CHECK_TRUE(view.camera() == nullptr);
         CHECK_TRUE(view.shadowsEnabled() == false);
 
@@ -50,7 +50,7 @@ namespace {
     /// back the camera that was set.
     void testSetTerrainAndCamera()
     {
-        SceneView view;
+        SceneViewCPU view;
         view.resize(320, 240);
 
         const std::shared_ptr<geo::TerrainModel> terrain = makeTerrain();
@@ -76,7 +76,7 @@ namespace {
     /// crashing and the accessor must reflect the last value set.
     void testSetShadowsEnabled()
     {
-        SceneView view;
+        SceneViewCPU view;
         view.resize(320, 240);
 
         const std::shared_ptr<geo::TerrainModel> terrain = makeTerrain();

@@ -1,4 +1,4 @@
-#include "GpuSceneRenderer.h"
+#include "SceneViewWEBGPU.h"
 
 #include <algorithm>
 #include <array>
@@ -83,7 +83,6 @@ constexpr double kSkyFill = 0.12;
 constexpr double kSunDiffuse = 0.85;
 constexpr float kTerrainColor[3] = {126.0f / 255.0f, 138.0f / 255.0f, 104.0f / 255.0f};
 constexpr float kSunOverlayColor[3] = {0.0f, 0.0f, 0.0f};
-constexpr int kSunPathSampleCount = 144;
 
 double clamp01(double value)
 {
@@ -122,14 +121,14 @@ fn fs_main(in: VertexOut) -> @location(0) vec4<f32> {
 
 } // namespace
 
-GpuSceneRenderer::GpuSceneRenderer() = default;
+SceneViewWEBGPU::SceneViewWEBGPU() = default;
 
-GpuSceneRenderer::~GpuSceneRenderer()
+SceneViewWEBGPU::~SceneViewWEBGPU()
 {
     shutdown();
 }
 
-void GpuSceneRenderer::shutdown()
+void SceneViewWEBGPU::shutdown()
 {
     if (m_bindGroup) { wgpuBindGroupRelease(m_bindGroup); m_bindGroup = nullptr; }
     if (m_uniformBuffer) { wgpuBufferRelease(m_uniformBuffer); m_uniformBuffer = nullptr; }
@@ -146,7 +145,7 @@ void GpuSceneRenderer::shutdown()
     if (m_instance) { wgpuInstanceRelease(m_instance); m_instance = nullptr; }
 }
 
-bool GpuSceneRenderer::initialize(void* nativeWindowHandle, std::uint32_t widthPx,
+bool SceneViewWEBGPU::initialize(void* nativeWindowHandle, std::uint32_t widthPx,
                                   std::uint32_t heightPx)
 {
     m_width = std::max<std::uint32_t>(1, widthPx);
@@ -263,7 +262,7 @@ bool GpuSceneRenderer::initialize(void* nativeWindowHandle, std::uint32_t widthP
     return true;
 }
 
-void GpuSceneRenderer::resize(std::uint32_t widthPx, std::uint32_t heightPx)
+void SceneViewWEBGPU::resize(std::uint32_t widthPx, std::uint32_t heightPx)
 {
     m_width = std::max<std::uint32_t>(1, widthPx);
     m_height = std::max<std::uint32_t>(1, heightPx);
@@ -284,7 +283,7 @@ void GpuSceneRenderer::resize(std::uint32_t widthPx, std::uint32_t heightPx)
     if (m_depthTexture) { wgpuTextureRelease(m_depthTexture); m_depthTexture = nullptr; }
 }
 
-void GpuSceneRenderer::ensurePipeline()
+void SceneViewWEBGPU::ensurePipeline()
 {
     if ((m_pipeline && m_overlayPipeline) || !m_device) {
         return;
@@ -384,85 +383,41 @@ void GpuSceneRenderer::ensurePipeline()
     wgpuPipelineLayoutRelease(pipelineLayout);
 }
 
-void GpuSceneRenderer::setTerrain(std::shared_ptr<const geo::TerrainModel> terrain)
+void SceneViewWEBGPU::onTerrainChanged()
 {
-    m_terrain = std::move(terrain);
-    rebuildLight();
     rebuildGeometry();
     rebuildSunOverlay();
 }
 
-void GpuSceneRenderer::setDateTime(const geo::DateTimeUtc& utc)
+void SceneViewWEBGPU::onDateTimeChanged()
 {
-    m_utc = utc;
-    rebuildLight();
     rebuildGeometry();
     rebuildSunOverlay();
 }
 
-void GpuSceneRenderer::setCamera(const geo::CameraPosition& camera)
+void SceneViewWEBGPU::onCameraChanged()
 {
-    m_camera = std::make_unique<geo::CameraPosition>(camera);
 }
 
-void GpuSceneRenderer::setShadowsEnabled(bool enabled)
-{
-    if (m_shadowsEnabled == enabled) {
-        return;
-    }
-    m_shadowsEnabled = enabled;
-    m_geometryDirty = true;
-}
-
-void GpuSceneRenderer::rebuildLight()
-{
-    if (!m_terrain) {
-        m_light.reset();
-        return;
-    }
-    m_light = std::make_unique<geo::SunLight>(*m_terrain, m_utc);
-}
-
-void GpuSceneRenderer::rebuildGeometry()
+void SceneViewWEBGPU::onShadowsEnabledChanged()
 {
     m_geometryDirty = true;
 }
 
-void GpuSceneRenderer::rebuildSunOverlay()
+void SceneViewWEBGPU::rebuildGeometry()
 {
-    m_sunPathPoints.clear();
-    m_hasCurrentSunPoint = false;
+    m_geometryDirty = true;
+}
+
+void SceneViewWEBGPU::rebuildSunOverlay()
+{
+    // The sun path points themselves were already recomputed by
+    // SceneViewBase::rebuildSunPathOverlay(); here we just mark the GPU
+    // overlay buffer as needing a re-upload.
     m_overlayDirty = true;
-
-    if (!m_terrain) {
-        return;
-    }
-
-    const geo::HorizonDome& dome = m_terrain->dome();
-    const geo::SunPath path(dome, m_utc.year, m_utc.month, m_utc.day, kSunPathSampleCount);
-
-    m_sunPathPoints = path.arcPoints();
-
-    geo::DateTimeUtc sunriseUtc;
-    if (path.sunrise(sunriseUtc)) {
-        const geo::SunPosition sunrisePos(dome.standpoint(), sunriseUtc);
-        m_sunPathPoints.insert(m_sunPathPoints.begin(), sunrisePos.projectOnDome(dome));
-    }
-
-    geo::DateTimeUtc sunsetUtc;
-    if (path.sunset(sunsetUtc)) {
-        const geo::SunPosition sunsetPos(dome.standpoint(), sunsetUtc);
-        m_sunPathPoints.push_back(sunsetPos.projectOnDome(dome));
-    }
-
-    const geo::SunPosition nowPos(dome.standpoint(), m_utc);
-    if (nowPos.isAboveHorizon()) {
-        m_currentSunPoint = nowPos.projectOnDome(dome);
-        m_hasCurrentSunPoint = true;
-    }
 }
 
-void GpuSceneRenderer::uploadGeometryIfDirty()
+void SceneViewWEBGPU::uploadGeometryIfDirty()
 {
     if (!m_geometryDirty || !m_terrain || !m_device) {
         return;
@@ -539,7 +494,7 @@ void GpuSceneRenderer::uploadGeometryIfDirty()
     wgpuQueueWriteBuffer(m_queue, m_vertexBuffer, 0, gpuVertices.data(), byteSize);
 }
 
-void GpuSceneRenderer::uploadSunOverlayIfDirty()
+void SceneViewWEBGPU::uploadSunOverlayIfDirty()
 {
     if (!m_overlayDirty || !m_terrain || !m_device) {
         return;
@@ -621,7 +576,7 @@ void GpuSceneRenderer::uploadSunOverlayIfDirty()
     wgpuQueueWriteBuffer(m_queue, m_overlayVertexBuffer, 0, overlayVertices.data(), byteSize);
 }
 
-void GpuSceneRenderer::renderFrame()
+void SceneViewWEBGPU::renderFrame()
 {
     if (!isValid() || !m_terrain || !m_camera) {
         return;
@@ -645,7 +600,7 @@ void GpuSceneRenderer::renderFrame()
         m_depthView = wgpuTextureCreateView(m_depthTexture, nullptr);
     }
 
-    // View/projection matrix, mirroring SceneView's software camera math.
+    // View/projection matrix, mirroring SceneViewCPU's software camera math.
     const geo::Vector3 eye = m_camera->localPosition();
     geo::Vector3 target{0.0, 0.0, 0.0};
     double heightM = 0.0;

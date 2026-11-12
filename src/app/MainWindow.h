@@ -12,11 +12,11 @@
 #include <memory>
 
 #if defined(SOLARSIM_USE_OPENGL)
-#include "GLSceneView.h"
-using SceneViewWidget = GLSceneView;
+#include "SceneViewGL.h"
+using SceneViewWidget = SceneViewGL;
 #else
-class SceneView;
-using SceneViewWidget = SceneView;
+class SceneViewCPU;
+using SceneViewWidget = SceneViewCPU;
 #endif
 
 class QDateEdit;

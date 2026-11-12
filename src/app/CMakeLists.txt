@@ -12,7 +12,7 @@ endif()
 set(CMAKE_AUTOMOC ON)
 
 # Optional hardware accelerated rendering backends. Off by default; the
-# software rasterizer (SceneView) is used unless one of these is enabled.
+# software rasterizer (SceneViewCPU) is used unless one of these is enabled.
 # Only one can be active at a time.
 option(SOLARSIM_USE_WEBGPU "Render the scene with hardware accelerated WebGPU instead of the software rasterizer" OFF)
 option(SOLARSIM_USE_OPENGL "Render the scene with hardware accelerated OpenGL (Qt's QOpenGLWidget) instead of the software rasterizer" OFF)
@@ -23,7 +23,7 @@ endif()
 
 # The application logic (everything except main.cpp) lives in a static
 # library so the unit tests in tests/app can link against the same
-# MainWindow/SceneView/HeightDataSources code without a second main().
+# MainWindow/SceneViewCPU/HeightDataSources code without a second main().
 add_library(SolarSimAppLib STATIC
     MainWindow.cpp
     MainWindow.h
@@ -31,13 +31,15 @@ add_library(SolarSimAppLib STATIC
     GeoDataSources.h
     MongooseFetch.cpp
     MongooseFetch.h
-    SceneView.cpp
-    SceneView.h    
+    SceneViewBase.cpp
+    SceneViewBase.h
+    SceneViewCPU.cpp
+    SceneViewCPU.h    
     ProgressDisplay.h    
 )
 
 if(SOLARSIM_USE_OPENGL)
-    target_sources(SolarSimAppLib PRIVATE GLSceneView.cpp GLSceneView.h)
+    target_sources(SolarSimAppLib PRIVATE SceneViewGL.cpp SceneViewGL.h)
     target_compile_definitions(SolarSimAppLib PUBLIC SOLARSIM_USE_OPENGL)
 
     if(Qt6_FOUND)
@@ -48,11 +50,11 @@ if(SOLARSIM_USE_OPENGL)
         target_link_libraries(SolarSimAppLib PUBLIC Qt5::OpenGL)
     endif()
 #else()
-#    target_sources(SolarSimAppLib PRIVATE SceneView.cpp SceneView.h)
+#    target_sources(SolarSimAppLib PRIVATE SceneViewCPU.cpp SceneViewCPU.h)
 endif()
 
 if(SOLARSIM_USE_WEBGPU)
-    target_sources(SolarSimAppLib PRIVATE GpuSceneRenderer.cpp GpuSceneRenderer.h)
+    target_sources(SolarSimAppLib PRIVATE SceneViewWEBGPU.cpp SceneViewWEBGPU.h)
     target_compile_definitions(SolarSimAppLib PUBLIC SOLARSIM_USE_WEBGPU)
 
     if(EMSCRIPTEN)

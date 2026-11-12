@@ -3,7 +3,7 @@
 #include "ProgressDisplay.h"
 #include "GeoDataSources.h"
 //#if !defined(SOLARSIM_USE_OPENGL)
-#include "SceneView.h"
+#include "SceneViewCPU.h"
 //#endif
 
 
@@ -38,7 +38,7 @@ constexpr double kHomeLongitudeDeg = 11.14493;
 
 /// Extent (half size of the rendered terrain patch in metres.
 /// Values <= 0 use the full ground-plane radius of the horizon dome.
-constexpr double kSceneExtentM = 1600.0;
+constexpr double kSceneExtentM = 2300.0;
 
 /// Grid spacing of the terrain mesh in metres.
 constexpr double kSceneGridSpacingM = 10.0;
@@ -53,7 +53,7 @@ constexpr int kPlaybackTickIntervalMs = 40;
 /// milliseconds (about one minute).
 constexpr double kPlaybackDurationMs = 60000.0;
 
-double minutesOfDay(const geo::DateTimeUtc& utc)
+static double minutesOfDay(const geo::DateTimeUtc& utc)
 {
     return utc.hour * 60.0 + utc.minute + utc.second / 60.0;
 }

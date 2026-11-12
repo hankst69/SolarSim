@@ -2,7 +2,7 @@
 #
 # These link against SolarSimAppLib, the static library that src/app's
 # CMakeLists.txt builds from everything except main.cpp, so the tests exercise
-# the exact same MainWindow/SceneView/HeightDataSources code as the shipped
+# the exact same MainWindow/SceneViewCPU/HeightDataSources code as the shipped
 # application without needing a second QApplication entry point.
 #
 # The tests create real Qt widgets, so they need a QApplication; they run with

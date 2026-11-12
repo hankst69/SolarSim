@@ -1,9 +1,7 @@
 #pragma once
 
-#include "geolib/CameraPosition.h"
-#include "geolib/DateTimeUtc.h"
-#include "geolib/SunPath.h"
-#include "geolib/SunLight.h"
+#include "SceneViewBase.h"
+
 #include "geolib/TerrainModel.h"
 
 #include <webgpu/webgpu.h>
@@ -28,13 +26,13 @@
 /// expensive part of shading a frame, so it is only evaluated when
 /// setShadowsEnabled(true) is set; by default a cheap sun-facing preview
 /// shading is used instead, keeping date/time changes interactive.
-class GpuSceneRenderer {
+class SceneViewWEBGPU : public SceneViewBase {
 public:
-    GpuSceneRenderer();
-    ~GpuSceneRenderer();
+    SceneViewWEBGPU();
+    ~SceneViewWEBGPU();
 
-    GpuSceneRenderer(const GpuSceneRenderer&) = delete;
-    GpuSceneRenderer& operator=(const GpuSceneRenderer&) = delete;
+    SceneViewWEBGPU(const SceneViewWEBGPU&) = delete;
+    SceneViewWEBGPU& operator=(const SceneViewWEBGPU&) = delete;
 
     /// Initializes the WebGPU instance/adapter/device and creates a surface
     /// for the given native window handle. Returns false if WebGPU is not
@@ -44,16 +42,17 @@ public:
 
     void resize(std::uint32_t widthPx, std::uint32_t heightPx);
 
-    void setTerrain(std::shared_ptr<const geo::TerrainModel> terrain);
-    void setDateTime(const geo::DateTimeUtc& utc);
-    void setCamera(const geo::CameraPosition& camera);
-    void setShadowsEnabled(bool enabled);
-
     bool isValid() const { return m_device != nullptr; }
 
     /// Uploads the current scene mesh/lighting (if dirty) and renders one
     /// frame to the surface.
     void renderFrame();
+
+protected:
+    void onTerrainChanged() override;
+    void onDateTimeChanged() override;
+    void onCameraChanged() override;
+    void onShadowsEnabledChanged() override;
 
 private:
     struct Vertex {
@@ -62,7 +61,6 @@ private:
     };
 
     void shutdown();
-    void rebuildLight();
     void rebuildGeometry();
     void rebuildSunOverlay();
     void ensurePipeline();
@@ -88,16 +86,6 @@ private:
     std::uint32_t m_height{1};
     bool m_geometryDirty{true};
     bool m_overlayDirty{true};
-    bool m_shadowsEnabled{false};
     std::uint32_t m_vertexCount{0};
     std::uint32_t m_overlayVertexCount{0};
-
-    std::shared_ptr<const geo::TerrainModel> m_terrain;
-    std::unique_ptr<geo::SunLight> m_light;
-    std::unique_ptr<geo::CameraPosition> m_camera;
-    geo::DateTimeUtc m_utc;
-
-    std::vector<geo::Vector3> m_sunPathPoints;
-    geo::Vector3 m_currentSunPoint;
-    bool m_hasCurrentSunPoint{false};
 };

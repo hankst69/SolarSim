@@ -1,4 +1,4 @@
-#include "SceneView.h"
+#include "SceneViewCPU.h"
 
 #include "geolib/Angle.h"
 
@@ -30,9 +30,6 @@ constexpr double kSunDiffuse = 0.85;
 /// Base albedo colour of the terrain.
 const QColor kTerrainColor(126, 138, 104);
 
-/// Number of intervals used for sun path sampling (sampleCount + 1 points).
-constexpr int kSunPathSampleCount = 144;
-
 const QColor kSunPathColor(0, 0, 0); //(255, 210, 80);
 const QColor kSunMarkerColor(255, 240, 170);
 const QColor kSunMarkerOutlineColor(40, 35, 22); //(0, 0, 0);
@@ -44,7 +41,7 @@ double clamp01(double value)
 
 } // namespace
 
-SceneView::SceneView(QWidget* parent)
+SceneViewCPU::SceneViewCPU(QWidget* parent)
     : QWidget(parent)
 {
     setMinimumSize(480, 360);
@@ -57,11 +54,11 @@ SceneView::SceneView(QWidget* parent)
     setAttribute(Qt::WA_NativeWindow);
     setAttribute(Qt::WA_PaintOnScreen);
     setAttribute(Qt::WA_NoSystemBackground);
-    m_gpuRenderer = std::make_unique<GpuSceneRenderer>();
+    m_gpuRenderer = std::make_unique<SceneViewWEBGPU>();
 #endif
 }
 
-void SceneView::resizeEvent(QResizeEvent* event)
+void SceneViewCPU::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
 
@@ -73,11 +70,8 @@ void SceneView::resizeEvent(QResizeEvent* event)
 #endif
 }
 
-void SceneView::setTerrain(std::shared_ptr<const geo::TerrainModel> terrain)
+void SceneViewCPU::onTerrainChanged()
 {
-    m_terrain = std::move(terrain);
-    rebuildLight();
-    rebuildSunPathOverlay();
     m_shadingDirty = true;
 
 #if defined(SOLARSIM_USE_WEBGPU)
@@ -94,96 +88,46 @@ void SceneView::setTerrain(std::shared_ptr<const geo::TerrainModel> terrain)
     update();
 }
 
-void SceneView::setDateTime(const geo::DateTimeUtc& utc)
+void SceneViewCPU::onDateTimeChanged()
 {
-    m_utc = utc;
-    rebuildLight();
-    rebuildSunPathOverlay();
     m_shadingDirty = true;
 
 #if defined(SOLARSIM_USE_WEBGPU)
     if (m_gpuInitialized) {
-        m_gpuRenderer->setDateTime(utc);
+        m_gpuRenderer->setDateTime(m_utc);
     }
 #endif
 
     update();
 }
 
-void SceneView::setShadowsEnabled(bool enabled)
+void SceneViewCPU::onShadowsEnabledChanged()
 {
-    if (m_shadowsEnabled == enabled) {
-        return;
-    }
-    m_shadowsEnabled = enabled;
     m_shadingDirty = true;
     update();
 }
 
-void SceneView::setCamera(const geo::CameraPosition& camera)
+void SceneViewCPU::onCameraChanged()
 {
-    m_camera = std::make_unique<geo::CameraPosition>(camera);
     updateViewFrame();
 
 #if defined(SOLARSIM_USE_WEBGPU)
     if (m_gpuInitialized) {
-        m_gpuRenderer->setCamera(camera);
+        m_gpuRenderer->setCamera(*m_camera);
     }
 #endif
 
     update();
 }
 
-void SceneView::rebuildLight()
-{
-    if (!m_terrain) {
-        m_light.reset();
-        return;
-    }
-    m_light = std::make_unique<geo::SunLight>(*m_terrain, m_utc);
-}
-
-void SceneView::rebuildSunPathOverlay()
-{
-    m_sunPathPoints.clear();
-    m_hasCurrentSunPoint = false;
-
-    if (!m_terrain) {
-        return;
-    }
-
-    const geo::HorizonDome& dome = m_terrain->dome();
-    const geo::SunPath path(dome, m_utc.year, m_utc.month, m_utc.day, kSunPathSampleCount);
-
-    m_sunPathPoints = path.arcPoints();
-
-    geo::DateTimeUtc sunriseUtc;
-    if (path.sunrise(sunriseUtc)) {
-        const geo::SunPosition sunrisePos(dome.standpoint(), sunriseUtc);
-        m_sunPathPoints.insert(m_sunPathPoints.begin(), sunrisePos.projectOnDome(dome));
-    }
-
-    geo::DateTimeUtc sunsetUtc;
-    if (path.sunset(sunsetUtc)) {
-        const geo::SunPosition sunsetPos(dome.standpoint(), sunsetUtc);
-        m_sunPathPoints.push_back(sunsetPos.projectOnDome(dome));
-    }
-
-    const geo::SunPosition nowPos(dome.standpoint(), m_utc);
-    if (nowPos.isAboveHorizon()) {
-        m_currentSunPoint = nowPos.projectOnDome(dome);
-        m_hasCurrentSunPoint = true;
-    }
-}
-
-void SceneView::updateViewFrame()
+void SceneViewCPU::updateViewFrame()
 {
     if (!m_camera) {
         return;
     }
 }
 
-void SceneView::drawSunOverlay(QPainter& painter)
+void SceneViewCPU::drawSunOverlay(QPainter& painter)
 {
     if (!m_camera) {
         return;
@@ -228,7 +172,7 @@ void SceneView::drawSunOverlay(QPainter& painter)
     }
 }
 
-bool SceneView::projectPoint(const geo::Vector3& local, QPointF& screen, double& depth) const
+bool SceneViewCPU::projectPoint(const geo::Vector3& local, QPointF& screen, double& depth) const
 {
     const geo::Vector3 rel = local - m_eye;
 
@@ -248,7 +192,7 @@ bool SceneView::projectPoint(const geo::Vector3& local, QPointF& screen, double&
     return true;
 }
 
-void SceneView::rebuildShading()
+void SceneViewCPU::rebuildShading()
 {
     m_faceShadeColors.clear();
     m_shadingDirty = false;
@@ -305,7 +249,7 @@ void SceneView::rebuildShading()
     }
 }
 
-void SceneView::collectFaces(QVector<Face>& faces)
+void SceneViewCPU::collectFaces(QVector<Face>& faces)
 {
     if (m_shadingDirty) {
         rebuildShading();
@@ -344,7 +288,7 @@ void SceneView::collectFaces(QVector<Face>& faces)
               [](const Face& lhs, const Face& rhs) { return lhs.depth > rhs.depth; });
 }
 
-void SceneView::paintEvent(QPaintEvent* /*event*/)
+void SceneViewCPU::paintEvent(QPaintEvent* /*event*/)
 {
 #if defined(SOLARSIM_USE_WEBGPU)
     if (m_gpuInitialized) {
@@ -412,40 +356,17 @@ void SceneView::paintEvent(QPaintEvent* /*event*/)
     drawSunOverlay(painter);
 }
 
-void SceneView::mousePressEvent(QMouseEvent* event)
+void SceneViewCPU::mousePressEvent(QMouseEvent* event)
 {
-    m_lastMousePos = event->pos();
+    handleOrbitMousePress(event->pos());
 }
 
-void SceneView::mouseMoveEvent(QMouseEvent* event)
+void SceneViewCPU::mouseMoveEvent(QMouseEvent* event)
 {
-    if (!m_camera || !(event->buttons() & Qt::LeftButton)) {
-        return;
-    }
-
-    const QPoint delta = event->pos() - m_lastMousePos;
-    m_lastMousePos = event->pos();
-    if (delta.isNull()) {
-        return;
-    }
-
-    // Dragging orbits the camera around the standpoint.
-    setCamera(m_camera->orbited(-delta.x() * 0.4, delta.y() * 0.3));
-    emit cameraChanged();
+    handleOrbitMouseMove(event);
 }
 
-void SceneView::wheelEvent(QWheelEvent* event)
+void SceneViewCPU::wheelEvent(QWheelEvent* event)
 {
-    if (!m_camera) {
-        return;
-    }
-
-    const int steps = event->angleDelta().y();
-    if (steps == 0) {
-        return;
-    }
-
-    setCamera(m_camera->zoomed(steps > 0 ? 0.9 : 1.0 / 0.9));
-    emit cameraChanged();
-    event->accept();
+    handleOrbitWheel(event);
 }

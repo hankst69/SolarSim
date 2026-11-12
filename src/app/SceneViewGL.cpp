@@ -1,4 +1,4 @@
-#include "GLSceneView.h"
+#include "SceneViewGL.h"
 
 #include <QMouseEvent>
 #include <QWheelEvent>
@@ -16,7 +16,6 @@ constexpr float kTerrainColor[3] = {126.0f / 255.0f, 138.0f / 255.0f, 104.0f / 2
 constexpr float kSunPathColor[3] = {0.0f, 0.0f, 0.0f};
 
 constexpr float kSunMarkerColor[3] = { 255.0f / 255.0f, 240.0f / 255.0f, 170.0f / 255.0f };
-constexpr int kSunPathSampleCount = 144;
 
 double clamp01(double value)
 {
@@ -52,14 +51,14 @@ void main()
 
 } // namespace
 
-GLSceneView::GLSceneView(QWidget* parent)
+SceneViewGL::SceneViewGL(QWidget* parent)
     : QOpenGLWidget(parent)
 {
     setMinimumSize(480, 360);
     setFocusPolicy(Qt::StrongFocus);
 }
 
-GLSceneView::~GLSceneView()
+SceneViewGL::~SceneViewGL()
 {
     // Destroy GPU resources while the context is still current.
     makeCurrent();
@@ -70,7 +69,7 @@ GLSceneView::~GLSceneView()
     doneCurrent();
 }
 
-void GLSceneView::initializeGL()
+void SceneViewGL::initializeGL()
 {
     initializeOpenGLFunctions();
     glEnable(GL_DEPTH_TEST);
@@ -101,21 +100,12 @@ void GLSceneView::initializeGL()
     uploadSunOverlayIfNeeded();
 }
 
-void GLSceneView::resizeGL(int /*w*/, int /*h*/)
+void SceneViewGL::resizeGL(int /*w*/, int /*h*/)
 {
     // QOpenGLWidget already applies glViewport for us before paintGL().
 }
 
-void GLSceneView::rebuildLight()
-{
-    if (!m_terrain) {
-        m_light.reset();
-        return;
-    }
-    m_light = std::make_unique<geo::SunLight>(*m_terrain, m_utc);
-}
-
-void GLSceneView::rebuildGeometry()
+void SceneViewGL::rebuildGeometry()
 {
     m_geometryDirty = true;
     if (m_glInitialized) {
@@ -123,79 +113,40 @@ void GLSceneView::rebuildGeometry()
     }
 }
 
-void GLSceneView::rebuildSunOverlay()
+void SceneViewGL::rebuildSunOverlay()
 {
-    m_sunPathPoints.clear();
-    m_hasCurrentSunPoint = false;
+    // The sun path points themselves were already recomputed by
+    // SceneViewBase::rebuildSunPathOverlay(); here we just mark the GPU
+    // overlay buffer as needing a re-upload.
     m_overlayDirty = true;
-
-    if (!m_terrain) {
-        if (m_glInitialized) {
-            update();
-        }
-        return;
-    }
-
-    const geo::HorizonDome& dome = m_terrain->dome();
-    const geo::SunPath path(dome, m_utc.year, m_utc.month, m_utc.day, kSunPathSampleCount);
-
-    m_sunPathPoints = path.arcPoints();
-
-    geo::DateTimeUtc sunriseUtc;
-    if (path.sunrise(sunriseUtc)) {
-        const geo::SunPosition sunrisePos(dome.standpoint(), sunriseUtc);
-        m_sunPathPoints.insert(m_sunPathPoints.begin(), sunrisePos.projectOnDome(dome));
-    }
-
-    geo::DateTimeUtc sunsetUtc;
-    if (path.sunset(sunsetUtc)) {
-        const geo::SunPosition sunsetPos(dome.standpoint(), sunsetUtc);
-        m_sunPathPoints.push_back(sunsetPos.projectOnDome(dome));
-    }
-
-    const geo::SunPosition nowPos(dome.standpoint(), m_utc);
-    if (nowPos.isAboveHorizon()) {
-        m_currentSunPoint = nowPos.projectOnDome(dome);
-        m_hasCurrentSunPoint = true;
-    }
-
     if (m_glInitialized) {
         update();
     }
 }
 
-void GLSceneView::setTerrain(std::shared_ptr<const geo::TerrainModel> terrain)
+void SceneViewGL::onTerrainChanged()
 {
-    m_terrain = std::move(terrain);
-    rebuildLight();
     rebuildGeometry();
     rebuildSunOverlay();
 }
 
-void GLSceneView::setDateTime(const geo::DateTimeUtc& utc)
+void SceneViewGL::onDateTimeChanged()
 {
-    m_utc = utc;
-    rebuildLight();
     rebuildGeometry();
     rebuildSunOverlay();
 }
 
-void GLSceneView::setCamera(const geo::CameraPosition& camera)
+void SceneViewGL::onCameraChanged()
 {
-    m_camera = std::make_unique<geo::CameraPosition>(camera);
     update();
 }
 
-void GLSceneView::setShadowsEnabled(bool enabled)
+void SceneViewGL::onShadowsEnabledChanged()
 {
-    if (m_shadowsEnabled == enabled) {
-        return;
-    }
-    m_shadowsEnabled = enabled;
     rebuildGeometry();
 }
 
-void GLSceneView::uploadGeometryIfNeeded()
+void SceneViewGL::uploadGeometryIfNeeded()
 {
     if (!m_geometryDirty || !m_glInitialized || !m_terrain) {
         return;
@@ -272,7 +223,7 @@ void GLSceneView::uploadGeometryIfNeeded()
     m_vao.release();
 }
 
-void GLSceneView::uploadSunOverlayIfNeeded()
+void SceneViewGL::uploadSunOverlayIfNeeded()
 {
     if (!m_overlayDirty || !m_glInitialized) {
         return;
@@ -338,7 +289,7 @@ void GLSceneView::uploadSunOverlayIfNeeded()
     m_overlayVao.release();
 }
 
-void GLSceneView::paintGL()
+void SceneViewGL::paintGL()
 {
     const bool sunUp = m_light && m_light->isAboveHorizon();
     if (sunUp) {
@@ -399,39 +350,17 @@ void GLSceneView::paintGL()
     m_program.release();
 }
 
-void GLSceneView::mousePressEvent(QMouseEvent* event)
+void SceneViewGL::mousePressEvent(QMouseEvent* event)
 {
-    m_lastMousePos = event->pos();
+    handleOrbitMousePress(event->pos());
 }
 
-void GLSceneView::mouseMoveEvent(QMouseEvent* event)
+void SceneViewGL::mouseMoveEvent(QMouseEvent* event)
 {
-    if (!m_camera || !(event->buttons() & Qt::LeftButton)) {
-        return;
-    }
-
-    const QPoint delta = event->pos() - m_lastMousePos;
-    m_lastMousePos = event->pos();
-    if (delta.isNull()) {
-        return;
-    }
-
-    setCamera(m_camera->orbited(-delta.x() * 0.4, delta.y() * 0.3));
-    emit cameraChanged();
+    handleOrbitMouseMove(event);
 }
 
-void GLSceneView::wheelEvent(QWheelEvent* event)
+void SceneViewGL::wheelEvent(QWheelEvent* event)
 {
-    if (!m_camera) {
-        return;
-    }
-
-    const int steps = event->angleDelta().y();
-    if (steps == 0) {
-        return;
-    }
-
-    setCamera(m_camera->zoomed(steps > 0 ? 0.9 : 1.0 / 0.9));
-    emit cameraChanged();
-    event->accept();
+    handleOrbitWheel(event);
 }
