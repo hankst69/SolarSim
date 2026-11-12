@@ -12,21 +12,15 @@
 #include <memory>
 #include <vector>
 
-#if defined(SOLARSIM_USE_WEBGPU)
-#include "SceneViewWEBGPU.h"
-#endif
-
 class QPainter;
 
-/// View of the terrain scene.
-//
-/// By default the widget projects the triangle mesh of a geo::TerrainModel
-/// with a simple software painter's algorithm. When built with
-/// SOLARSIM_USE_WEBGPU, rendering is instead hardware accelerated through the
-/// WebGPU API (SceneViewWEBGPU), which works identically on desktop (native
-/// WebGPU via wgpu-native/Dawn) and in a WebAssembly build running in a
-/// browser. Shading combines a weak ambient/diffuse base light with the
-/// directional geo::SunLight of the current date/time. Terrain cast shadows
+/// View of the terrain scene that projects the triangle mesh of a
+/// geo::TerrainModel with a simple software painter's algorithm. This is the
+/// baseline rendering strategy that always works, regardless of available
+/// hardware acceleration; see SceneViewGL and SceneViewWEBGPU for the
+/// OpenGL/WebGPU hardware accelerated alternatives selected by MainWindow.
+/// Shading combines a weak ambient/diffuse base light with the directional
+/// geo::SunLight of the current date/time. Terrain cast shadows
 /// (geo::TerrainModel::isInShadow()) are expensive to evaluate and are only
 /// computed when setShadowsEnabled(true) is set; by default a cheap
 /// sun-facing preview shading is used so camera/date/time interaction stays
@@ -78,9 +72,4 @@ private:
     // every paint.
     std::vector<QColor> m_faceShadeColors;
     bool m_shadingDirty{true};
-
-#if defined(SOLARSIM_USE_WEBGPU)
-    std::unique_ptr<SceneViewWEBGPU> m_gpuRenderer;
-    bool m_gpuInitialized{false};
-#endif
 };

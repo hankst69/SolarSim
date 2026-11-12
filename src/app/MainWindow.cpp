@@ -2,9 +2,6 @@
 
 #include "ProgressDisplay.h"
 #include "GeoDataSources.h"
-//#if !defined(SOLARSIM_USE_OPENGL)
-#include "SceneViewCPU.h"
-//#endif
 
 
 #include "geolib/CameraPosition.h"

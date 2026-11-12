@@ -1,5 +1,9 @@
 #include "SceneViewWEBGPU.h"
 
+#include <QMouseEvent>
+#include <QResizeEvent>
+#include <QWheelEvent>
+
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -121,7 +125,18 @@ fn fs_main(in: VertexOut) -> @location(0) vec4<f32> {
 
 } // namespace
 
-SceneViewWEBGPU::SceneViewWEBGPU() = default;
+SceneViewWEBGPU::SceneViewWEBGPU(QWidget* parent)
+    : QWidget(parent)
+{
+    setMinimumSize(480, 360);
+    setFocusPolicy(Qt::StrongFocus);
+
+    // A real, non-alien native window handle is required to create a WebGPU
+    // surface from it.
+    setAttribute(Qt::WA_NativeWindow);
+    setAttribute(Qt::WA_PaintOnScreen);
+    setAttribute(Qt::WA_NoSystemBackground);
+}
 
 SceneViewWEBGPU::~SceneViewWEBGPU()
 {
@@ -145,9 +160,10 @@ void SceneViewWEBGPU::shutdown()
     if (m_instance) { wgpuInstanceRelease(m_instance); m_instance = nullptr; }
 }
 
-bool SceneViewWEBGPU::initialize(void* nativeWindowHandle, std::uint32_t widthPx,
-                                  std::uint32_t heightPx)
+bool SceneViewWEBGPU::initialize(std::uint32_t widthPx, std::uint32_t heightPx)
 {
+    void* nativeWindowHandle = reinterpret_cast<void*>(winId());
+
     m_width = std::max<std::uint32_t>(1, widthPx);
     m_height = std::max<std::uint32_t>(1, heightPx);
 
@@ -262,7 +278,7 @@ bool SceneViewWEBGPU::initialize(void* nativeWindowHandle, std::uint32_t widthPx
     return true;
 }
 
-void SceneViewWEBGPU::resize(std::uint32_t widthPx, std::uint32_t heightPx)
+void SceneViewWEBGPU::resizeSurface(std::uint32_t widthPx, std::uint32_t heightPx)
 {
     m_width = std::max<std::uint32_t>(1, widthPx);
     m_height = std::max<std::uint32_t>(1, heightPx);
@@ -385,23 +401,31 @@ void SceneViewWEBGPU::ensurePipeline()
 
 void SceneViewWEBGPU::onTerrainChanged()
 {
+    if (!m_gpuInitialized) {
+        m_gpuInitialized = initialize(static_cast<std::uint32_t>(width()),
+                                      static_cast<std::uint32_t>(height()));
+    }
     rebuildGeometry();
     rebuildSunOverlay();
+    update();
 }
 
 void SceneViewWEBGPU::onDateTimeChanged()
 {
     rebuildGeometry();
     rebuildSunOverlay();
+    update();
 }
 
 void SceneViewWEBGPU::onCameraChanged()
 {
+    update();
 }
 
 void SceneViewWEBGPU::onShadowsEnabledChanged()
 {
     m_geometryDirty = true;
+    update();
 }
 
 void SceneViewWEBGPU::rebuildGeometry()
@@ -680,4 +704,35 @@ void SceneViewWEBGPU::renderFrame()
 #if !defined(__EMSCRIPTEN__)
     wgpuSurfacePresent(m_surface);
 #endif
+}
+
+void SceneViewWEBGPU::paintEvent(QPaintEvent* /*event*/)
+{
+    if (m_gpuInitialized) {
+        renderFrame();
+    }
+}
+
+void SceneViewWEBGPU::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+
+    if (m_gpuInitialized) {
+        resizeSurface(static_cast<std::uint32_t>(width()), static_cast<std::uint32_t>(height()));
+    }
+}
+
+void SceneViewWEBGPU::mousePressEvent(QMouseEvent* event)
+{
+    handleOrbitMousePress(event->pos());
+}
+
+void SceneViewWEBGPU::mouseMoveEvent(QMouseEvent* event)
+{
+    handleOrbitMouseMove(event);
+}
+
+void SceneViewWEBGPU::wheelEvent(QWheelEvent* event)
+{
+    handleOrbitWheel(event);
 }

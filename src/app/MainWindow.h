@@ -14,8 +14,11 @@
 #if defined(SOLARSIM_USE_OPENGL)
 #include "SceneViewGL.h"
 using SceneViewWidget = SceneViewGL;
+#elif defined(SOLARSIM_USE_WEBGPU)
+#include "SceneViewWEBGPU.h"
+using SceneViewWidget = SceneViewWEBGPU;
 #else
-class SceneViewCPU;
+#include "SceneViewCPU.h"
 using SceneViewWidget = SceneViewCPU;
 #endif
 

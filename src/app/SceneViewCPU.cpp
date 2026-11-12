@@ -47,57 +47,22 @@ SceneViewCPU::SceneViewCPU(QWidget* parent)
     setMinimumSize(480, 360);
     setMouseTracking(false);
     setFocusPolicy(Qt::StrongFocus);
-
-#if defined(SOLARSIM_USE_WEBGPU)
-    // A real, non-alien native window handle is required to create a WebGPU
-    // surface from it.
-    setAttribute(Qt::WA_NativeWindow);
-    setAttribute(Qt::WA_PaintOnScreen);
-    setAttribute(Qt::WA_NoSystemBackground);
-    m_gpuRenderer = std::make_unique<SceneViewWEBGPU>();
-#endif
 }
 
 void SceneViewCPU::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
-
-#if defined(SOLARSIM_USE_WEBGPU)
-    if (m_gpuInitialized) {
-        m_gpuRenderer->resize(static_cast<std::uint32_t>(width()),
-                              static_cast<std::uint32_t>(height()));
-    }
-#endif
 }
 
 void SceneViewCPU::onTerrainChanged()
 {
     m_shadingDirty = true;
-
-#if defined(SOLARSIM_USE_WEBGPU)
-    if (!m_gpuInitialized && m_gpuRenderer) {
-        m_gpuInitialized = m_gpuRenderer->initialize(reinterpret_cast<void*>(winId()),
-                                                     static_cast<std::uint32_t>(width()),
-                                                     static_cast<std::uint32_t>(height()));
-    }
-    if (m_gpuInitialized) {
-        m_gpuRenderer->setTerrain(m_terrain);
-    }
-#endif
-
     update();
 }
 
 void SceneViewCPU::onDateTimeChanged()
 {
     m_shadingDirty = true;
-
-#if defined(SOLARSIM_USE_WEBGPU)
-    if (m_gpuInitialized) {
-        m_gpuRenderer->setDateTime(m_utc);
-    }
-#endif
-
     update();
 }
 
@@ -110,13 +75,6 @@ void SceneViewCPU::onShadowsEnabledChanged()
 void SceneViewCPU::onCameraChanged()
 {
     updateViewFrame();
-
-#if defined(SOLARSIM_USE_WEBGPU)
-    if (m_gpuInitialized) {
-        m_gpuRenderer->setCamera(*m_camera);
-    }
-#endif
-
     update();
 }
 
@@ -290,13 +248,6 @@ void SceneViewCPU::collectFaces(QVector<Face>& faces)
 
 void SceneViewCPU::paintEvent(QPaintEvent* /*event*/)
 {
-#if defined(SOLARSIM_USE_WEBGPU)
-    if (m_gpuInitialized) {
-        m_gpuRenderer->renderFrame();
-        return;
-    }
-#endif
-
     if (!m_camera) {
         return;
     }

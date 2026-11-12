@@ -13,7 +13,11 @@ set(CMAKE_AUTOMOC ON)
 
 # Optional hardware accelerated rendering backends. Off by default; the
 # software rasterizer (SceneViewCPU) is used unless one of these is enabled.
-# Only one can be active at a time.
+# Only one can be active at a time. Each backend is a self-contained,
+# drop-in replacement QWidget (SceneViewCPU/SceneViewGL/SceneViewWEBGPU all
+# derive from SceneViewBase); MainWindow is the single place that selects
+# between them based on these compile definitions (see SceneViewWidget in
+# MainWindow.h).
 option(SOLARSIM_USE_WEBGPU "Render the scene with hardware accelerated WebGPU instead of the software rasterizer" OFF)
 option(SOLARSIM_USE_OPENGL "Render the scene with hardware accelerated OpenGL (Qt's QOpenGLWidget) instead of the software rasterizer" OFF)
 
@@ -49,8 +53,6 @@ if(SOLARSIM_USE_OPENGL)
         find_package(Qt5 5.12 COMPONENTS OpenGL REQUIRED)
         target_link_libraries(SolarSimAppLib PUBLIC Qt5::OpenGL)
     endif()
-#else()
-#    target_sources(SolarSimAppLib PRIVATE SceneViewCPU.cpp SceneViewCPU.h)
 endif()
 
 if(SOLARSIM_USE_WEBGPU)
