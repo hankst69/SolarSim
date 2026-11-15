@@ -169,9 +169,13 @@ void SceneViewCPU::rebuildShading()
     m_faceShadeColors.reserve(mesh.triangles().size());
 
     for (const geo::TriangleMesh::Triangle& tri : mesh.triangles()) {
-        const geo::Vector3& a = vertices[tri.a];
-        const geo::Vector3& b = vertices[tri.b];
-        const geo::Vector3& c = vertices[tri.c];
+        geo::Vector3 a = vertices[tri.a];
+        geo::Vector3 b = vertices[tri.b];
+        geo::Vector3 c = vertices[tri.c];
+        const geo::Vector3 shadowCentre = (a + b + c) / 3.0;
+        a.z *= m_terrainHeightExaggeration;
+        b.z *= m_terrainHeightExaggeration;
+        c.z *= m_terrainHeightExaggeration;
 
         geo::Vector3 normal = (b - a).cross(c - a).normalized();
         if (normal.z < 0.0) {
@@ -191,8 +195,7 @@ void SceneViewCPU::rebuildShading()
                 // otherwise show a cheap sun-facing preview.
                 bool inShadow = false;
                 if (m_shadowsEnabled) {
-                    const geo::Vector3 centre = (a + b + c) / 3.0;
-                    inShadow = m_terrain->isInShadow(centre, toSun);
+                    inShadow = m_terrain->isInShadow(shadowCentre, toSun);
                 }
                 if (!inShadow) {
                     shade += kSunDiffuse * lambert * clamp01(sunIntensity + 0.25);
@@ -220,9 +223,12 @@ void SceneViewCPU::collectFaces(QVector<Face>& faces)
 
     std::size_t idx = 0;
     for (const geo::TriangleMesh::Triangle& tri : mesh.triangles()) {
-        const geo::Vector3& a = vertices[tri.a];
-        const geo::Vector3& b = vertices[tri.b];
-        const geo::Vector3& c = vertices[tri.c];
+        geo::Vector3 a = vertices[tri.a];
+        geo::Vector3 b = vertices[tri.b];
+        geo::Vector3 c = vertices[tri.c];
+        a.z *= m_terrainHeightExaggeration;
+        b.z *= m_terrainHeightExaggeration;
+        c.z *= m_terrainHeightExaggeration;
 
         Face face;
         double depthA = 0.0;
@@ -253,6 +259,7 @@ void SceneViewCPU::paintEvent(QPaintEvent* /*event*/)
     }
 
     m_eye = m_camera->localPosition();
+    m_eye.z *= m_terrainHeightExaggeration;
     m_forward = m_camera->viewDirection();
 
     // The scene target is the terrain surface below the dome centre.
@@ -260,7 +267,7 @@ void SceneViewCPU::paintEvent(QPaintEvent* /*event*/)
     if (m_terrain) {
         double heightM = 0.0;
         if (m_terrain->heightAt(0.0, 0.0, heightM)) {
-            m_target.z = heightM;
+            m_target.z = heightM * m_terrainHeightExaggeration;
         }
     }
     m_forward = (m_target - m_eye).normalized();

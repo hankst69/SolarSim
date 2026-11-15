@@ -3,6 +3,8 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 
+#include <algorithm>
+
 namespace {
 
 /// Number of intervals used for sun path sampling (sampleCount + 1 points).
@@ -39,6 +41,16 @@ void SceneViewBase::setShadowsEnabled(bool enabled)
     }
     m_shadowsEnabled = enabled;
     onShadowsEnabledChanged();
+}
+
+void SceneViewBase::setTerrainHeightExaggeration(double factor)
+{
+    const double clampedFactor = std::max(1.0, factor);
+    if (m_terrainHeightExaggeration == clampedFactor) {
+        return;
+    }
+    m_terrainHeightExaggeration = clampedFactor;
+    onTerrainChanged();
 }
 
 void SceneViewBase::rebuildLight()

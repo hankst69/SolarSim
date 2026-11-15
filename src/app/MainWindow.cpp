@@ -143,6 +143,15 @@ void MainWindow::buildUi()
     m_shadowsCheckBox->setChecked(false);
     dateLayout->addWidget(m_shadowsCheckBox);
 
+    m_heightExaggerationSpin = new QDoubleSpinBox(timeBox);
+    m_heightExaggerationSpin->setObjectName(QStringLiteral("heightExaggerationSpin"));
+    m_heightExaggerationSpin->setRange(1.0, 20.0);
+    m_heightExaggerationSpin->setSingleStep(0.5);
+    m_heightExaggerationSpin->setValue(1.0);
+    m_heightExaggerationSpin->setSuffix(QStringLiteral("x"));
+    dateLayout->addWidget(new QLabel(tr("Terrain height:"), timeBox));
+    dateLayout->addWidget(m_heightExaggerationSpin);
+
     dateLayout->addStretch(1);
     timeLayout->addLayout(dateLayout);
 
@@ -267,6 +276,15 @@ void MainWindow::buildUi()
     connect(m_jumpToEndButton, &QPushButton::clicked, this, &MainWindow::onJumpToEnd);
     connect(m_localTimeCheckBox, &QCheckBox::toggled, this, &MainWindow::onLocalTimeToggled);
     connect(m_shadowsCheckBox, &QCheckBox::toggled, this, &MainWindow::onShadowsToggled);
+    connect(m_heightExaggerationSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            this, &MainWindow::onTerrainHeightExaggerationChanged);
+}
+
+void MainWindow::onTerrainHeightExaggerationChanged(double factor)
+{
+    if (m_sceneView) {
+        m_sceneView->setTerrainHeightExaggeration(factor);
+    }
 }
 
 void MainWindow::onShadowsToggled(bool checked)

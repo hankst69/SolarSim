@@ -164,9 +164,13 @@ void SceneViewGL::uploadGeometryIfNeeded()
     gpuVertices.reserve(mesh.triangles().size() * 3);
 
     for (const geo::TriangleMesh::Triangle& tri : mesh.triangles()) {
-        const geo::Vector3& a = vertices[tri.a];
-        const geo::Vector3& b = vertices[tri.b];
-        const geo::Vector3& c = vertices[tri.c];
+        geo::Vector3 a = vertices[tri.a];
+        geo::Vector3 b = vertices[tri.b];
+        geo::Vector3 c = vertices[tri.c];
+        const geo::Vector3 shadowCentre = (a + b + c) / 3.0;
+        a.z *= m_terrainHeightExaggeration;
+        b.z *= m_terrainHeightExaggeration;
+        c.z *= m_terrainHeightExaggeration;
 
         geo::Vector3 normal = (b - a).cross(c - a).normalized();
         if (normal.z < 0.0) {
@@ -179,8 +183,7 @@ void SceneViewGL::uploadGeometryIfNeeded()
             if (lambert > 0.0) {
                 bool inShadow = false;
                 if (m_shadowsEnabled) {
-                    const geo::Vector3 centre = (a + b + c) / 3.0;
-                    inShadow = m_terrain->isInShadow(centre, toSun);
+                    inShadow = m_terrain->isInShadow(shadowCentre, toSun);
                 }
                 if (!inShadow) {
                     shade += kSunDiffuse * lambert * clamp01(sunIntensity + 0.25);
@@ -306,11 +309,12 @@ void SceneViewGL::paintGL()
         return;
     }
 
-    const geo::Vector3 eye = m_camera->localPosition();
+    geo::Vector3 eye = m_camera->localPosition();
+    eye.z *= m_terrainHeightExaggeration;
     geo::Vector3 target{0.0, 0.0, 0.0};
     double heightM = 0.0;
     if (m_terrain->heightAt(0.0, 0.0, heightM)) {
-        target.z = heightM;
+        target.z = heightM * m_terrainHeightExaggeration;
     }
 
     QMatrix4x4 view;

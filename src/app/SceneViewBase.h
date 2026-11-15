@@ -35,9 +35,11 @@ public:
     void setDateTime(const geo::DateTimeUtc& utc);
     void setCamera(const geo::CameraPosition& camera);
     void setShadowsEnabled(bool enabled);
+    void setTerrainHeightExaggeration(double factor);
 
     const geo::CameraPosition* camera() const { return m_camera.get(); }
     bool shadowsEnabled() const { return m_shadowsEnabled; }
+    double terrainHeightExaggeration() const { return m_terrainHeightExaggeration; }
 
     void setProgressClass(geo::ProgressClassPtr progressClass)
     {
@@ -85,6 +87,7 @@ protected:
     bool m_hasCurrentSunPoint{false};
 
     bool m_shadowsEnabled{false};
+    double m_terrainHeightExaggeration{1.0};
 
     QPoint m_lastMousePos;
 
