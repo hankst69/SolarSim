@@ -21,7 +21,7 @@ function(add_app_test name source)
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endfunction()
 
-add_app_test(HeightDataSourcesTests HeightDataSourcesTests.cpp)
+add_app_test(GeoDataSourcesTests GeoDataSourcesTests.cpp)
 add_app_test(SceneViewTests SceneViewTests.cpp)
 add_app_test(MainWindowTests MainWindowTests.cpp)
 

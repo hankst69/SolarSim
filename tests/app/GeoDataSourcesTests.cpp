@@ -56,5 +56,5 @@ int main(int argc, char* argv[])
 
     testRegistersSourcesOnce();
 
-    return geotest::summarize("HeightDataSourcesTests");
+    return geotest::summarize("GeoDataSourcesTests");
 }
