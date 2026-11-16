@@ -34,6 +34,12 @@ public:
     /// Height at a geodetic position; projects to UTM32 first.
     bool sampleGeodetic(double latitudeDeg, double longitudeDeg, double& heightM) const;
 
+    /// Height of the grid point exactly (within a small tolerance) at the given
+    /// UTM32 position, without interpolation. Used to resolve individual
+    /// corners of an interpolation stencil that straddles a tile border, where
+    /// no single tile holds all four corners.
+    bool pointValue(double eastingM, double northingM, double& heightM) const;
+
 private:
     bool cellValue(int column, int row, double& value) const;
 

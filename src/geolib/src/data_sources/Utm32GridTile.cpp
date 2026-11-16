@@ -67,6 +67,27 @@ bool Utm32GridTile::sampleUtm(double eastingM, double northingM, double& heightM
     return true;
 }
 
+bool Utm32GridTile::pointValue(double eastingM, double northingM, double& heightM) const
+{
+    if (!valid() || m_cellSizeM <= 0.0) {
+        return false;
+    }
+
+    const double fx = (eastingM - m_originEastingM) / m_cellSizeM;
+    const double fy = (northingM - m_originNorthingM) / m_cellSizeM;
+    const int column = static_cast<int>(std::lround(fx));
+    const int row = static_cast<int>(std::lround(fy));
+
+    // Tolerate small rounding noise (e.g. from UTM round-tripping) but require
+    // the position to actually sit on this tile's grid point.
+    constexpr double kTolerance = 1e-3;
+    if (std::fabs(fx - column) > kTolerance || std::fabs(fy - row) > kTolerance) {
+        return false;
+    }
+
+    return cellValue(column, row, heightM);
+}
+
 bool Utm32GridTile::sampleGeodetic(double latitudeDeg, double longitudeDeg, double& heightM) const
 {
     double easting = 0.0;
