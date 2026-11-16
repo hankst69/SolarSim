@@ -100,6 +100,9 @@ private:
     QDoubleSpinBox* m_azimuthSpin{nullptr};
     QDoubleSpinBox* m_elevationSpin{nullptr};
     QDoubleSpinBox* m_rangeSpin{nullptr};
+    QSlider* m_azimuthSlider{nullptr};
+    QSlider* m_elevationSlider{nullptr};
+    QSlider* m_rangeSlider{nullptr};
 
     bool m_updatingControls{false};
     bool m_isPlaying{false};

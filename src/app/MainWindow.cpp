@@ -50,6 +50,13 @@ constexpr int kPlaybackTickIntervalMs = 40;
 /// milliseconds (about one minute).
 constexpr double kPlaybackDurationMs = 60000.0;
 
+/// Resolution of camera adjustmnent sliders
+/// one slider step = 0.1 unit
+constexpr int kCameraSliderScale = 10;
+
+/// Fixed number of chars that shall be displayable within the three slider controls to give them a fixed width in the ui
+constexpr int kCameraSpinWidthChars = 20;
+
 static double minutesOfDay(const geo::DateTimeUtc& utc)
 {
     return utc.hour * 60.0 + utc.minute + utc.second / 60.0;
@@ -230,11 +237,20 @@ void MainWindow::buildUi()
     m_azimuthSpin->setWrapping(true);
     m_azimuthSpin->setSuffix(QStringLiteral(" deg"));
 
+    m_azimuthSlider = new QSlider(Qt::Horizontal, cameraBox);
+    m_azimuthSlider->setObjectName(QStringLiteral("azimuthSlider"));
+    m_azimuthSlider->setRange(0, 360 * appconfig::kCameraSliderScale);
+
     m_elevationSpin = new QDoubleSpinBox(cameraBox);
     m_elevationSpin->setObjectName(QStringLiteral("elevationSpin"));
     m_elevationSpin->setRange(geo::CameraPosition::kMinElevationDeg,
                               geo::CameraPosition::kMaxElevationDeg);
     m_elevationSpin->setSuffix(QStringLiteral(" deg"));
+
+    m_elevationSlider = new QSlider(Qt::Horizontal, cameraBox);
+    m_elevationSlider->setObjectName(QStringLiteral("elevationSlider"));
+    m_elevationSlider->setRange(static_cast<int>(geo::CameraPosition::kMinElevationDeg * appconfig::kCameraSliderScale),
+                                static_cast<int>(geo::CameraPosition::kMaxElevationDeg * appconfig::kCameraSliderScale));
 
     m_rangeSpin = new QDoubleSpinBox(cameraBox);
     m_rangeSpin->setObjectName(QStringLiteral("rangeSpin"));
@@ -242,10 +258,32 @@ void MainWindow::buildUi()
     m_rangeSpin->setSingleStep(10.0);
     m_rangeSpin->setSuffix(QStringLiteral(" m"));
 
+    m_rangeSlider = new QSlider(Qt::Horizontal, cameraBox);
+    m_rangeSlider->setObjectName(QStringLiteral("rangeSlider"));
+    m_rangeSlider->setRange(static_cast<int>(geo::CameraPosition::kMinRangeM), 20000);
+
+    // Give the three camera spin boxes a consistent width so they line up.
+    const int cameraSpinWidth = m_rangeSpin->fontMetrics().horizontalAdvance(QLatin1Char('0')) * appconfig::kCameraSpinWidthChars;
+    m_azimuthSpin->setMinimumWidth(cameraSpinWidth);
+    m_elevationSpin->setMinimumWidth(cameraSpinWidth);
+    m_rangeSpin->setMinimumWidth(cameraSpinWidth);
+
+    auto* azimuthRowLayout = new QHBoxLayout();
+    azimuthRowLayout->addWidget(m_azimuthSpin);
+    azimuthRowLayout->addWidget(m_azimuthSlider, 1);
+
+    auto* elevationRowLayout = new QHBoxLayout();
+    elevationRowLayout->addWidget(m_elevationSpin);
+    elevationRowLayout->addWidget(m_elevationSlider, 1);
+
+    auto* rangeRowLayout = new QHBoxLayout();
+    rangeRowLayout->addWidget(m_rangeSpin);
+    rangeRowLayout->addWidget(m_rangeSlider, 1);
+
     auto* cameraForm = new QFormLayout();
-    cameraForm->addRow(tr("Azimuth:"), m_azimuthSpin);
-    cameraForm->addRow(tr("Elevation:"), m_elevationSpin);
-    cameraForm->addRow(tr("Distance:"), m_rangeSpin);
+    cameraForm->addRow(tr("Azimuth:"), azimuthRowLayout);
+    cameraForm->addRow(tr("Elevation:"), elevationRowLayout);
+    cameraForm->addRow(tr("Distance:"), rangeRowLayout);
     cameraLayout->addLayout(cameraForm);
 
     auto* resetButton = new QPushButton(tr("Reset camera"), cameraBox);
@@ -265,6 +303,24 @@ void MainWindow::buildUi()
             &MainWindow::onCameraSpinChanged);
     connect(m_rangeSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
             &MainWindow::onCameraSpinChanged);
+    connect(m_azimuthSlider, &QSlider::valueChanged, this, [this](int value) {
+        if (m_updatingControls) {
+            return;
+        }
+        m_azimuthSpin->setValue(value / 10.0);
+    });
+    connect(m_elevationSlider, &QSlider::valueChanged, this, [this](int value) {
+        if (m_updatingControls) {
+            return;
+        }
+        m_elevationSpin->setValue(value / 10.0);
+    });
+    connect(m_rangeSlider, &QSlider::valueChanged, this, [this](int value) {
+        if (m_updatingControls) {
+            return;
+        }
+        m_rangeSpin->setValue(value);
+    });
     connect(resetButton, &QPushButton::clicked, this, &MainWindow::onResetCamera);
     connect(m_sceneView, &SceneViewWidget::cameraChanged, this, &MainWindow::onCameraChangedByView);
 
@@ -456,6 +512,9 @@ void MainWindow::updateCameraControls()
     m_azimuthSpin->setValue(camera->azimuth());
     m_elevationSpin->setValue(camera->elevation());
     m_rangeSpin->setValue(camera->range());
+    m_azimuthSlider->setValue(static_cast<int>(std::lround(camera->azimuth() * 10.0)));
+    m_elevationSlider->setValue(static_cast<int>(std::lround(camera->elevation() * 10.0)));
+    m_rangeSlider->setValue(static_cast<int>(std::lround(camera->range())));
     m_updatingControls = false;
 }
 
@@ -474,6 +533,13 @@ void MainWindow::onTimeSliderChanged(int value)
 
 void MainWindow::onCameraSpinChanged()
 {
+    const bool wasUpdating = m_updatingControls;
+    m_updatingControls = true;
+    m_azimuthSlider->setValue(static_cast<int>(std::lround(m_azimuthSpin->value() * 10.0)));
+    m_elevationSlider->setValue(static_cast<int>(std::lround(m_elevationSpin->value() * 10.0)));
+    m_rangeSlider->setValue(static_cast<int>(std::lround(m_rangeSpin->value())));
+    m_updatingControls = wasUpdating;
+
     if (m_updatingControls || !m_terrain) {
         return;
     }
