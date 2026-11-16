@@ -87,6 +87,7 @@ constexpr double kSkyFill = 0.12;
 constexpr double kSunDiffuse = 0.85;
 constexpr float kTerrainColor[3] = {126.0f / 255.0f, 138.0f / 255.0f, 104.0f / 255.0f};
 constexpr float kSunOverlayColor[3] = {0.0f, 0.0f, 0.0f};
+constexpr float kCenterCrossColor[3] = {1.0f, 0.0f, 0.0f};
 
 double clamp01(double value)
 {
@@ -530,9 +531,11 @@ void SceneViewWEBGPU::uploadSunOverlayIfDirty()
 
     std::vector<Vertex> overlayVertices;
     if (m_sunPathPoints.size() >= 2) {
-        overlayVertices.reserve((m_sunPathPoints.size() - 1) * 2 + (m_hasCurrentSunPoint ? 4 : 0));
+        overlayVertices.reserve((m_sunPathPoints.size() - 1) * 2 + (m_hasCurrentSunPoint ? 4 : 0) +
+                               (m_hasCenterCross ? m_centerCrossPoints.size() : 0));
     } else {
-        overlayVertices.reserve(m_hasCurrentSunPoint ? 4 : 0);
+        overlayVertices.reserve((m_hasCurrentSunPoint ? 4 : 0) +
+                               (m_hasCenterCross ? m_centerCrossPoints.size() : 0));
     }
 
     for (std::size_t i = 1; i < m_sunPathPoints.size(); ++i) {
@@ -582,6 +585,26 @@ void SceneViewWEBGPU::uploadSunOverlayIfDirty()
             v.color[1] = kSunOverlayColor[1];
             v.color[2] = kSunOverlayColor[2];
             overlayVertices.push_back(v);
+        }
+    }
+
+    if (m_hasCenterCross && m_centerCrossPoints.size() >= 4) {
+        for (std::size_t i = 0; i + 1 < m_centerCrossPoints.size(); i += 2) {
+            geo::Vector3 p0 = m_centerCrossPoints[i];
+            geo::Vector3 p1 = m_centerCrossPoints[i + 1];
+            p0.z *= m_terrainHeightExaggeration;
+            p1.z *= m_terrainHeightExaggeration;
+
+            for (const geo::Vector3& p : {p0, p1}) {
+                Vertex v{};
+                v.position[0] = static_cast<float>(p.x);
+                v.position[1] = static_cast<float>(p.y);
+                v.position[2] = static_cast<float>(p.z);
+                v.color[0] = kCenterCrossColor[0];
+                v.color[1] = kCenterCrossColor[1];
+                v.color[2] = kCenterCrossColor[2];
+                overlayVertices.push_back(v);
+            }
         }
     }
 

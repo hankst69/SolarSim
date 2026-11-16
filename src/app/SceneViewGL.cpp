@@ -16,6 +16,7 @@ constexpr float kTerrainColor[3] = {126.0f / 255.0f, 138.0f / 255.0f, 104.0f / 2
 constexpr float kSunPathColor[3] = {0.0f, 0.0f, 0.0f};
 
 constexpr float kSunMarkerColor[3] = { 255.0f / 255.0f, 240.0f / 255.0f, 170.0f / 255.0f };
+constexpr float kCenterCrossColor[3] = { 1.0f, 0.0f, 0.0f };
 
 double clamp01(double value)
 {
@@ -274,6 +275,22 @@ void SceneViewGL::uploadSunOverlayIfNeeded()
         }
     }
 
+    m_centerCrossVertexOffset = static_cast<int>(overlayVertices.size());
+    if (m_hasCenterCross) {
+        for (const geo::Vector3& point : m_centerCrossPoints) {
+            geo::Vector3 p = point;
+            p.z *= m_terrainHeightExaggeration;
+            Vertex vertex{};
+            vertex.position[0] = static_cast<float>(p.x);
+            vertex.position[1] = static_cast<float>(p.y);
+            vertex.position[2] = static_cast<float>(p.z);
+            vertex.color[0] = kCenterCrossColor[0];
+            vertex.color[1] = kCenterCrossColor[1];
+            vertex.color[2] = kCenterCrossColor[2];
+            overlayVertices.push_back(vertex);
+        }
+    }
+
     m_overlayVertexCount = static_cast<int>(overlayVertices.size());
 
     m_overlayVao.bind();
@@ -344,9 +361,14 @@ void SceneViewGL::paintGL()
         glDrawArrays(GL_LINE_STRIP, 0, pathCount);
 
         const int markerOffset = pathCount;
-        const int markerCount = m_overlayVertexCount - pathCount;
+        const int markerCount = m_centerCrossVertexOffset - pathCount;
         if (markerCount >= 4) {
             glDrawArrays(GL_LINES, markerOffset, markerCount);
+        }
+
+        const int crossCount = m_overlayVertexCount - m_centerCrossVertexOffset;
+        if (crossCount >= 4) {
+            glDrawArrays(GL_LINES, m_centerCrossVertexOffset, crossCount);
         }
         m_overlayVao.release();
     }

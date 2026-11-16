@@ -10,6 +10,10 @@ namespace {
 /// Number of intervals used for sun path sampling (sampleCount + 1 points).
 constexpr int kSunPathSampleCount = 144;
 
+/// Scene center cross radius
+constexpr double kHalfLengthM = 5.0; // 10m total arm length.
+
+
 } // namespace
 
 void SceneViewBase::setTerrain(std::shared_ptr<const geo::TerrainModel> terrain)
@@ -17,6 +21,7 @@ void SceneViewBase::setTerrain(std::shared_ptr<const geo::TerrainModel> terrain)
     m_terrain = std::move(terrain);
     rebuildLight();
     rebuildSunPathOverlay();
+    rebuildCenterCrossOverlay();
     onTerrainChanged();
 }
 
@@ -93,6 +98,25 @@ void SceneViewBase::rebuildSunPathOverlay()
         m_currentSunPoint = nowPos.projectOnDome(dome);
         m_hasCurrentSunPoint = true;
     }
+}
+
+void SceneViewBase::rebuildCenterCrossOverlay()
+{
+    m_centerCrossPoints.clear();
+    m_hasCenterCross = false;
+
+    if (!m_terrain) {
+        return;
+    }
+
+    double heightM = 0.0;
+    m_terrain->heightAt(0.0, 0.0, heightM);
+
+    m_centerCrossPoints.push_back(geo::Vector3{-kHalfLengthM, 0.0, heightM});
+    m_centerCrossPoints.push_back(geo::Vector3{kHalfLengthM, 0.0, heightM});
+    m_centerCrossPoints.push_back(geo::Vector3{0.0, -kHalfLengthM, heightM});
+    m_centerCrossPoints.push_back(geo::Vector3{0.0, kHalfLengthM, heightM});
+    m_hasCenterCross = true;
 }
 
 void SceneViewBase::handleOrbitMousePress(const QPoint& pos)

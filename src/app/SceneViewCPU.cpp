@@ -33,6 +33,7 @@ const QColor kTerrainColor(126, 138, 104);
 const QColor kSunPathColor(0, 0, 0); //(255, 210, 80);
 const QColor kSunMarkerColor(255, 240, 170);
 const QColor kSunMarkerOutlineColor(40, 35, 22); //(0, 0, 0);
+const QColor kCenterCrossColor(255, 0, 0);
 
 double clamp01(double value)
 {
@@ -126,6 +127,32 @@ void SceneViewCPU::drawSunOverlay(QPainter& painter)
             painter.setPen(QPen(kSunMarkerOutlineColor, 1));
             painter.setBrush(kSunMarkerColor);
             painter.drawEllipse(sunScreen, 5.0, 5.0);
+        }
+    }
+
+    if (m_hasCenterCross && m_centerCrossPoints.size() >= 4) {
+        QPointF a, b, c, d;
+        double depth = 0.0;
+        geo::Vector3 p0 = m_centerCrossPoints[0];
+        geo::Vector3 p1 = m_centerCrossPoints[1];
+        geo::Vector3 p2 = m_centerCrossPoints[2];
+        geo::Vector3 p3 = m_centerCrossPoints[3];
+        p0.z *= m_terrainHeightExaggeration;
+        p1.z *= m_terrainHeightExaggeration;
+        p2.z *= m_terrainHeightExaggeration;
+        p3.z *= m_terrainHeightExaggeration;
+
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        QPen crossPen(kCenterCrossColor);
+        crossPen.setWidth(2);
+        painter.setPen(crossPen);
+        painter.setBrush(Qt::NoBrush);
+
+        if (projectPoint(p0, a, depth) && projectPoint(p1, b, depth)) {
+            painter.drawLine(a, b);
+        }
+        if (projectPoint(p2, c, depth) && projectPoint(p3, d, depth)) {
+            painter.drawLine(c, d);
         }
     }
 }

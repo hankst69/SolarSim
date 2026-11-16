@@ -61,6 +61,7 @@ protected:
 
     void rebuildLight();
     void rebuildSunPathOverlay();
+    void rebuildCenterCrossOverlay();
 
     /// Shared mouse-driven camera orbit/zoom handling. Concrete classes call
     /// these from their mousePressEvent()/mouseMoveEvent()/wheelEvent()
@@ -85,6 +86,12 @@ protected:
     std::vector<geo::Vector3> m_sunPathPoints;
     geo::Vector3 m_currentSunPoint;
     bool m_hasCurrentSunPoint{false};
+
+    /// Two 20m line segments marking the centre of the simulation (the dome
+    /// standpoint), laid on the terrain surface: {-10,0,h}-{10,0,h} and
+    /// {0,-10,h}-{0,10,h}, in local (non height-exaggerated) coordinates.
+    std::vector<geo::Vector3> m_centerCrossPoints;
+    bool m_hasCenterCross{false};
 
     bool m_shadowsEnabled{false};
     double m_terrainHeightExaggeration{1.0};
