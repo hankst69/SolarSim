@@ -89,6 +89,7 @@ public:
 
 private:
     void sampleHeights();
+    void fillIsolatedGaps();
     void buildTerrainMesh();
     void rebuildSceneMesh();
     bool gridHeight(std::size_t column, std::size_t row, double& heightM) const;

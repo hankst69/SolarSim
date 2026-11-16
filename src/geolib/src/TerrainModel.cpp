@@ -74,6 +74,73 @@ void TerrainModel::sampleHeights()
             ++m_validSamples;
         }
     }
+
+    fillIsolatedGaps();
+}
+
+void TerrainModel::fillIsolatedGaps()
+{
+    // Individual samples can fail (e.g. sporadic NODATA cells in the source
+    // raster, or round-off right at a tile border) even though all of their
+    // neighbours are valid. buildTerrainMesh() drops every triangle touching
+    // an invalid vertex, so a single missing sample punches a small hole into
+    // the mesh. Close such isolated gaps by averaging the valid 8-neighbours;
+    // genuinely uncovered areas (where most neighbours are also invalid) are
+    // left untouched and still show up as proper mesh holes.
+    if (m_samples < 3 || m_validSamples == 0) {
+        return;
+    }
+
+    std::vector<double> filledHeights;
+    std::vector<std::size_t> filledIndices;
+
+    for (std::size_t row = 0; row < m_samples; ++row) {
+        for (std::size_t column = 0; column < m_samples; ++column) {
+            const std::size_t index = row * m_samples + column;
+            if (m_valid[index]) {
+                continue;
+            }
+
+            double sum = 0.0;
+            int count = 0;
+            for (int dr = -1; dr <= 1; ++dr) {
+                const long long neighbourRow = static_cast<long long>(row) + dr;
+                if (neighbourRow < 0 || neighbourRow >= static_cast<long long>(m_samples)) {
+                    continue;
+                }
+                for (int dc = -1; dc <= 1; ++dc) {
+                    if (dr == 0 && dc == 0) {
+                        continue;
+                    }
+                    const long long neighbourColumn = static_cast<long long>(column) + dc;
+                    if (neighbourColumn < 0 || neighbourColumn >= static_cast<long long>(m_samples)) {
+                        continue;
+                    }
+                    const std::size_t neighbourIndex =
+                        static_cast<std::size_t>(neighbourRow) * m_samples +
+                        static_cast<std::size_t>(neighbourColumn);
+                    if (m_valid[neighbourIndex]) {
+                        sum += m_heights[neighbourIndex];
+                        ++count;
+                    }
+                }
+            }
+
+            // Require most of the 8-neighbourhood to be valid; otherwise this
+            // is a real data gap rather than an isolated dropout.
+            if (count >= 6) {
+                filledIndices.push_back(index);
+                filledHeights.push_back(sum / static_cast<double>(count));
+            }
+        }
+    }
+
+    for (std::size_t i = 0; i < filledIndices.size(); ++i) {
+        const std::size_t index = filledIndices[i];
+        m_heights[index] = filledHeights[i];
+        m_valid[index] = true;
+        ++m_validSamples;
+    }
 }
 
 bool TerrainModel::gridHeight(std::size_t column, std::size_t row, double& heightM) const

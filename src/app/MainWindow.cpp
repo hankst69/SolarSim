@@ -35,7 +35,7 @@ constexpr double kHomeLongitudeDeg = 11.14493;
 
 /// Extent (half size of the rendered terrain patch in metres.
 /// Values <= 0 use the full ground-plane radius of the horizon dome.
-constexpr double kSceneExtentM = 2300.0;
+constexpr double kSceneExtentM = 3100.0;
 
 /// Grid spacing of the terrain mesh in metres.
 constexpr double kSceneGridSpacingM = 10.0;
