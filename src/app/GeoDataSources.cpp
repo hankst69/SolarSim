@@ -42,6 +42,9 @@ bool GeoDataSources::fetchUrl(const std::string& url, const std::string& targetP
 {
     m_progressCount++;
     progress(m_progressCount, "downloadinig " + targetPath);
+    if (isCanceled()) {
+        return false;
+    }
 
     static QNetworkAccessManager manager;
 
@@ -125,8 +128,10 @@ void GeoDataSources::registerDataSources()
         [this](const std::string& url, const std::string& targetPath) -> bool {
             m_progressCount++;
             progress(m_progressCount, "downloadinig " + targetPath);
+            if (isCanceled()) {
+                return false;
+            }
             return app::fetchUrlMongoose(url, targetPath, {}, {});
-            //return fetchUrl(url, targetPath, {}, {});
         };
 
     m_bavariaDgm1TileDownloader = std::make_shared<geo::BavariaDgm1TileDownloader>(byConfig, byFetch);
@@ -149,8 +154,10 @@ void GeoDataSources::registerDataSources()
         [this](const std::string& url, const std::string& targetPath) -> bool {
             m_progressCount++;
             progress(m_progressCount, "downloadinig " + targetPath);
+            if (isCanceled()) {
+                return false;
+            }
             return app::fetchUrlMongoose(url, targetPath, kCopernicusUserName, kCopernicusPassword);
-            //return fetchUrl(url, targetPath, kCopernicusUserName, kCopernicusPassword);
     };
 
     m_worldDem30TileDownloader = std::make_shared<geo::WorldCopernicusDem30TileDownloader>(worldConfig, worldFetch);

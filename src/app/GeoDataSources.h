@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include "geolib/ProgressClass.h"
+
 #include "geolib/HeightDataSourceRegistry.h"
 #include "geolib/TextureDataSourceRegistry.h"
 
@@ -52,6 +54,13 @@ protected:
             int progressVal = percent % 100;
             m_progressClass->progress(progressVal, std::move(msg));
         }
+    }
+    bool isCanceled() const
+    {
+        if (m_progressClass) {
+            return m_progressClass->isCanceled();
+        }
+        return false;
     }
 private:
     geo::ProgressClassPtr m_progressClass;

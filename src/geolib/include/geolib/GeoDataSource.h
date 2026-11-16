@@ -71,6 +71,14 @@ public:
         }
     }
 
+    bool isCanceled()
+    {
+        if (m_progressClass) {
+            return m_progressClass->isCanceled();
+        }
+        return false;
+    }
+
 private:
     std::shared_ptr<ProgressClass> m_progressClass;
 };
