@@ -569,8 +569,7 @@ void SceneViewWEBGPU::uploadGeometryIfDirty()
     m_vertexCount = static_cast<std::uint32_t>(gpuVertices.size());
 
     if (m_centerCubeVisible && m_hasCenterCross) {
-        appendCubeTriangles(m_centerCubeCorners, m_terrainHeightExaggeration, kCenterCrossColor,
-                            gpuVertices);
+        appendCubeTriangles(m_centerCubeCorners, 1.0, kCenterCrossColor, gpuVertices);
         m_vertexCount = static_cast<std::uint32_t>(gpuVertices.size());
     }
 

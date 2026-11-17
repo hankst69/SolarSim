@@ -290,9 +290,7 @@ void SceneViewCPU::collectCenterCubeFaces(QVector<Face>& faces)
     std::vector<geo::Vector3> corners;
     corners.reserve(8);
     for (const geo::Vector3& corner : m_centerCubeCorners) {
-        geo::Vector3 p = corner;
-        p.z *= m_terrainHeightExaggeration;
-        corners.push_back(p);
+        corners.push_back(corner);
     }
 
     constexpr int kFaceIndices[6][4] = {
