@@ -30,6 +30,8 @@ class QPushButton;
 class QSlider;
 class QTimer;
 
+class LocationMapWidget;
+
 /// Main window of the SolarSim application: a terrain scene lit by the
 /// simulated sun, with a time slider from sunrise to sunset and interactive
 /// camera controls.
@@ -54,6 +56,9 @@ private slots:
     void onShadowsToggled(bool checked);
     void onCenterCubeToggled(bool checked);
     void onTerrainHeightExaggerationChanged(double factor);
+    void onLocationSpinChanged();
+    void onLocationPickedOnMap(double latitudeDeg, double longitudeDeg);
+    void onApplyLocationClicked();
     void initScene();
     void updateScene();
 
@@ -72,10 +77,15 @@ private:
     geo::DateTimeUtc displayTimeFor(const geo::DateTimeUtc& utc) const;
     geo::DateTimeUtc timeForSlider(int value) const;
     void setPlaying(bool playing);
+    void updateLocationControls();
 
     app::GeoDataSources* m_geo_data_sources{nullptr};
 
     geo::GeoLocation m_location;
+    /// Location currently selected in the UI controls, not yet applied to
+    /// the scene/terrain. Only taken over into m_location when the user
+    /// confirms via the "Apply" button.
+    geo::GeoLocation m_pendingLocation;
     std::shared_ptr<geo::TerrainModel> m_terrain;
     std::unique_ptr<geo::SunPath> m_sunPath;
 
@@ -105,6 +115,11 @@ private:
     QSlider* m_azimuthSlider{nullptr};
     QSlider* m_elevationSlider{nullptr};
     QSlider* m_rangeSlider{nullptr};
+
+    QDoubleSpinBox* m_latitudeSpin{nullptr};
+    QDoubleSpinBox* m_longitudeSpin{nullptr};
+    LocationMapWidget* m_locationMap{nullptr};
+    QPushButton* m_applyLocationButton{nullptr};
 
     bool m_updatingControls{false};
     bool m_isPlaying{false};

@@ -40,6 +40,9 @@ add_library(SolarSimAppLib STATIC
     SceneViewCPU.cpp
     SceneViewCPU.h    
     ProgressDisplay.h    
+    LocationMapWidget.cpp
+    LocationMapWidget.h
+    ContinentOutlines.h
 )
 
 if(SOLARSIM_USE_OPENGL)

@@ -2,6 +2,7 @@
 
 #include "ProgressDisplay.h"
 #include "GeoDataSources.h"
+#include "LocationMapWidget.h"
 
 
 #include "geolib/CameraPosition.h"
@@ -68,6 +69,7 @@ static double minutesOfDay(const geo::DateTimeUtc& utc)
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
     , m_location(appconfig::kHomeLatitudeDeg, appconfig::kHomeLongitudeDeg)
+    , m_pendingLocation(appconfig::kHomeLatitudeDeg, appconfig::kHomeLongitudeDeg)
 {
     buildUi();
 
@@ -78,7 +80,11 @@ MainWindow::MainWindow(QWidget* parent)
     m_dateEdit->setDate(today);
 
     registerGeoDataSources();
+
+    m_sceneInitialized = true;
     //initScene();
+    m_location = geo::GeoLocation(0,0);
+    updateLocationControls();
 }
 
 void MainWindow::updateScene()
@@ -297,6 +303,41 @@ void MainWindow::buildUi()
 
     layout->addWidget(cameraBox);
 
+    // Location control: latitude/longitude spin boxes plus a clickable map.
+    auto* locationBox = new QGroupBox(tr("Location"), central);
+    auto* locationLayout = new QHBoxLayout(locationBox);
+
+    m_latitudeSpin = new QDoubleSpinBox(locationBox);
+    m_latitudeSpin->setObjectName(QStringLiteral("latitudeSpin"));
+    m_latitudeSpin->setRange(-90.0, 90.0);
+    m_latitudeSpin->setDecimals(5);
+    m_latitudeSpin->setSuffix(QStringLiteral(" deg"));
+    m_latitudeSpin->setValue(m_location.latitude());
+
+    m_longitudeSpin = new QDoubleSpinBox(locationBox);
+    m_longitudeSpin->setObjectName(QStringLiteral("longitudeSpin"));
+    m_longitudeSpin->setRange(-180.0, 180.0);
+    m_longitudeSpin->setDecimals(5);
+    m_longitudeSpin->setSuffix(QStringLiteral(" deg"));
+    m_longitudeSpin->setValue(m_location.longitude());
+
+    auto* locationForm = new QFormLayout();
+    locationForm->addRow(tr("Latitude:"), m_latitudeSpin);
+    locationForm->addRow(tr("Longitude:"), m_longitudeSpin);
+    locationLayout->addLayout(locationForm);
+
+    m_locationMap = new LocationMapWidget(locationBox);
+    m_locationMap->setObjectName(QStringLiteral("locationMap"));
+    m_locationMap->setLocation(m_location.latitude(), m_location.longitude());
+    locationLayout->addWidget(m_locationMap, 1);
+
+    m_applyLocationButton = new QPushButton(tr("Apply"), locationBox);
+    m_applyLocationButton->setObjectName(QStringLiteral("applyLocationButton"));
+    m_applyLocationButton->setEnabled(false);
+    locationLayout->addWidget(m_applyLocationButton);
+
+    layout->addWidget(locationBox);
+
     setCentralWidget(central);
     statusBar();
 
@@ -340,6 +381,13 @@ void MainWindow::buildUi()
     connect(m_showCenterCubeCheckBox, &QCheckBox::toggled, this, &MainWindow::onCenterCubeToggled);
     connect(m_heightExaggerationSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this, &MainWindow::onTerrainHeightExaggerationChanged);
+    connect(m_latitudeSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
+            &MainWindow::onLocationSpinChanged);
+    connect(m_longitudeSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
+            &MainWindow::onLocationSpinChanged);
+    connect(m_locationMap, &LocationMapWidget::locationPicked, this,
+            &MainWindow::onLocationPickedOnMap);
+    connect(m_applyLocationButton, &QPushButton::clicked, this, &MainWindow::onApplyLocationClicked);
 }
 
 void MainWindow::onTerrainHeightExaggerationChanged(double factor)
@@ -347,6 +395,51 @@ void MainWindow::onTerrainHeightExaggerationChanged(double factor)
     if (m_sceneView) {
         m_sceneView->setTerrainHeightExaggeration(factor);
     }
+}
+
+void MainWindow::updateLocationControls()
+{
+    const bool wasUpdating = m_updatingControls;
+    m_updatingControls = true;
+    m_latitudeSpin->setValue(m_pendingLocation.latitude());
+    m_longitudeSpin->setValue(m_pendingLocation.longitude());
+    if (m_locationMap) {
+        m_locationMap->setLocation(m_pendingLocation.latitude(), m_pendingLocation.longitude());
+    }
+    m_updatingControls = wasUpdating;
+
+    if (m_applyLocationButton) {
+        const bool hasPendingChange = m_pendingLocation.latitude() != m_location.latitude()
+            || m_pendingLocation.longitude() != m_location.longitude();
+        m_applyLocationButton->setEnabled(hasPendingChange);
+    }
+}
+
+void MainWindow::onLocationSpinChanged()
+{
+    if (m_updatingControls) {
+        return;
+    }
+
+    m_pendingLocation = geo::GeoLocation(m_latitudeSpin->value(), m_longitudeSpin->value());
+    updateLocationControls();
+}
+
+void MainWindow::onLocationPickedOnMap(double latitudeDeg, double longitudeDeg)
+{
+    if (m_updatingControls) {
+        return;
+    }
+
+    m_pendingLocation = geo::GeoLocation(latitudeDeg, longitudeDeg);
+    updateLocationControls();
+}
+
+void MainWindow::onApplyLocationClicked()
+{
+    m_location = m_pendingLocation;
+    updateLocationControls();
+    updateScene();
 }
 
 void MainWindow::onShadowsToggled(bool checked)
@@ -581,7 +674,6 @@ void MainWindow::onResetCamera()
 
     m_sceneView->setCamera(camera);
     updateCameraControls();
-    //updateScene();
 }
 
 void MainWindow::setPlaying(bool playing)
