@@ -45,6 +45,7 @@ protected:
     void onDateTimeChanged() override;
     void onCameraChanged() override;
     void onShadowsEnabledChanged() override;
+    void onCenterCubeVisibleChanged() override { update(); }
     void emitCameraChanged() override { emit cameraChanged(); }
 
 private:
@@ -57,6 +58,7 @@ private:
 
     void rebuildShading();
     void collectFaces(QVector<Face>& faces);
+    void collectCenterCubeFaces(QVector<Face>& faces);
     void drawSunOverlay(QPainter& painter);
     bool projectPoint(const geo::Vector3& local, QPointF& screen, double& depth) const;
     void updateViewFrame();

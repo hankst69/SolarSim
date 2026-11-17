@@ -58,6 +58,7 @@ protected:
     void onDateTimeChanged() override;
     void onCameraChanged() override;
     void onShadowsEnabledChanged() override;
+    void onCenterCubeVisibleChanged() override;
     void emitCameraChanged() override { emit cameraChanged(); }
 
 private:

@@ -36,10 +36,12 @@ public:
     void setCamera(const geo::CameraPosition& camera);
     void setShadowsEnabled(bool enabled);
     void setTerrainHeightExaggeration(double factor);
+    void setCenterCubeVisible(bool visible);
 
     const geo::CameraPosition* camera() const { return m_camera.get(); }
     bool shadowsEnabled() const { return m_shadowsEnabled; }
     double terrainHeightExaggeration() const { return m_terrainHeightExaggeration; }
+    bool centerCubeVisible() const { return m_centerCubeVisible; }
 
     void setProgressClass(geo::ProgressClassPtr progressClass)
     {
@@ -54,6 +56,7 @@ protected:
     virtual void onDateTimeChanged() {}
     virtual void onCameraChanged() {}
     virtual void onShadowsEnabledChanged() {}
+    virtual void onCenterCubeVisibleChanged() {}
 
     /// Invoked by the shared mouse orbit/zoom handling below so the concrete
     /// widget can emit its own Qt cameraChanged() signal.
@@ -62,6 +65,7 @@ protected:
     void rebuildLight();
     void rebuildSunPathOverlay();
     void rebuildCenterCrossOverlay();
+    void rebuildCenterCubeGeometry();
 
     /// Shared mouse-driven camera orbit/zoom handling. Concrete classes call
     /// these from their mousePressEvent()/mouseMoveEvent()/wheelEvent()
@@ -93,8 +97,21 @@ protected:
     std::vector<geo::Vector3> m_centerCrossPoints;
     bool m_hasCenterCross{false};
 
+    /// Terrain height (local, non height-exaggerated coordinates) at the
+    /// centre of the simulation (east=0, north=0), used as the base of both
+    /// the centre cross and the centre cube marker.
+    double m_centerBaseHeightM{0.0};
+
+    /// Eight corners of the optional 10m x 10m x 10m red cube marker sitting
+    /// on the terrain surface at the centre of the simulation, in local
+    /// (non height-exaggerated) coordinates. Corners 0-3 are the bottom face
+    /// (counter-clockwise seen from above), 4-7 the top face in the same
+    /// order.
+    std::vector<geo::Vector3> m_centerCubeCorners;
+
     bool m_shadowsEnabled{false};
     double m_terrainHeightExaggeration{1.0};
+    bool m_centerCubeVisible{false};
 
     QPoint m_lastMousePos;
 

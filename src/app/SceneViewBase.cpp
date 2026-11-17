@@ -22,6 +22,7 @@ void SceneViewBase::setTerrain(std::shared_ptr<const geo::TerrainModel> terrain)
     rebuildLight();
     rebuildSunPathOverlay();
     rebuildCenterCrossOverlay();
+    rebuildCenterCubeGeometry();
     onTerrainChanged();
 }
 
@@ -56,6 +57,15 @@ void SceneViewBase::setTerrainHeightExaggeration(double factor)
     }
     m_terrainHeightExaggeration = clampedFactor;
     onTerrainChanged();
+}
+
+void SceneViewBase::setCenterCubeVisible(bool visible)
+{
+    if (m_centerCubeVisible == visible) {
+        return;
+    }
+    m_centerCubeVisible = visible;
+    onCenterCubeVisibleChanged();
 }
 
 void SceneViewBase::rebuildLight()
@@ -111,12 +121,38 @@ void SceneViewBase::rebuildCenterCrossOverlay()
 
     double heightM = 0.0;
     m_terrain->heightAt(0.0, 0.0, heightM);
+    m_centerBaseHeightM = heightM;
 
     m_centerCrossPoints.push_back(geo::Vector3{-kHalfLengthM, 0.0, heightM});
     m_centerCrossPoints.push_back(geo::Vector3{kHalfLengthM, 0.0, heightM});
     m_centerCrossPoints.push_back(geo::Vector3{0.0, -kHalfLengthM, heightM});
     m_centerCrossPoints.push_back(geo::Vector3{0.0, kHalfLengthM, heightM});
     m_hasCenterCross = true;
+}
+
+void SceneViewBase::rebuildCenterCubeGeometry()
+{
+    m_centerCubeCorners.clear();
+
+    if (!m_terrain) {
+        return;
+    }
+
+    constexpr double kHalfSizeM = 5.0; // 10m cube edge length.
+    const double baseZ = m_centerBaseHeightM;
+    const double topZ = baseZ + 2.0 * kHalfSizeM;
+
+    // Bottom face, counter-clockwise seen from above.
+    m_centerCubeCorners.push_back(geo::Vector3{-kHalfSizeM, -kHalfSizeM, baseZ});
+    m_centerCubeCorners.push_back(geo::Vector3{kHalfSizeM, -kHalfSizeM, baseZ});
+    m_centerCubeCorners.push_back(geo::Vector3{kHalfSizeM, kHalfSizeM, baseZ});
+    m_centerCubeCorners.push_back(geo::Vector3{-kHalfSizeM, kHalfSizeM, baseZ});
+
+    // Top face, same order.
+    m_centerCubeCorners.push_back(geo::Vector3{-kHalfSizeM, -kHalfSizeM, topZ});
+    m_centerCubeCorners.push_back(geo::Vector3{kHalfSizeM, -kHalfSizeM, topZ});
+    m_centerCubeCorners.push_back(geo::Vector3{kHalfSizeM, kHalfSizeM, topZ});
+    m_centerCubeCorners.push_back(geo::Vector3{-kHalfSizeM, kHalfSizeM, topZ});
 }
 
 void SceneViewBase::handleOrbitMousePress(const QPoint& pos)

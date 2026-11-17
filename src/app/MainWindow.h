@@ -52,6 +52,7 @@ private slots:
     void onPlaybackTick();
     void onLocalTimeToggled(bool checked);
     void onShadowsToggled(bool checked);
+    void onCenterCubeToggled(bool checked);
     void onTerrainHeightExaggerationChanged(double factor);
     void initScene();
     void updateScene();
@@ -86,6 +87,7 @@ private:
     QDateEdit* m_dateEdit{nullptr};
     QCheckBox* m_localTimeCheckBox{nullptr};
     QCheckBox* m_shadowsCheckBox{nullptr};
+    QCheckBox* m_showCenterCubeCheckBox{nullptr};
     QDoubleSpinBox* m_heightExaggerationSpin{nullptr};
     QSlider* m_timeSlider{nullptr};
     QLabel* m_timeLabel{nullptr};

@@ -11,6 +11,7 @@
 #include <QtGlobal>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 namespace {
@@ -34,6 +35,7 @@ const QColor kSunPathColor(0, 0, 0); //(255, 210, 80);
 const QColor kSunMarkerColor(255, 240, 170);
 const QColor kSunMarkerOutlineColor(40, 35, 22); //(0, 0, 0);
 const QColor kCenterCrossColor(255, 0, 0);
+const QColor kCenterCubeColor(255, 0, 0);
 
 double clamp01(double value)
 {
@@ -279,6 +281,52 @@ void SceneViewCPU::collectFaces(QVector<Face>& faces)
               [](const Face& lhs, const Face& rhs) { return lhs.depth > rhs.depth; });
 }
 
+void SceneViewCPU::collectCenterCubeFaces(QVector<Face>& faces)
+{
+    if (!m_centerCubeVisible || !m_hasCenterCross || m_centerCubeCorners.size() < 8) {
+        return;
+    }
+
+    std::vector<geo::Vector3> corners;
+    corners.reserve(8);
+    for (const geo::Vector3& corner : m_centerCubeCorners) {
+        geo::Vector3 p = corner;
+        p.z *= m_terrainHeightExaggeration;
+        corners.push_back(p);
+    }
+
+    constexpr int kFaceIndices[6][4] = {
+        {0, 1, 2, 3}, // bottom
+        {4, 7, 6, 5}, // top
+        {0, 4, 5, 1}, // south
+        {1, 5, 6, 2}, // east
+        {2, 6, 7, 3}, // north
+        {3, 7, 4, 0}, // west
+    };
+
+    for (const auto& faceIdx : kFaceIndices) {
+        const geo::Vector3& a = corners[faceIdx[0]];
+        const geo::Vector3& b = corners[faceIdx[1]];
+        const geo::Vector3& c = corners[faceIdx[2]];
+        const geo::Vector3& d = corners[faceIdx[3]];
+
+        for (const auto& tri : {std::array<const geo::Vector3*, 3>{&a, &b, &c},
+                                std::array<const geo::Vector3*, 3>{&a, &c, &d}}) {
+            Face face;
+            double depthA = 0.0, depthB = 0.0, depthC = 0.0;
+            if (!projectPoint(*tri[0], face.screen[0], depthA) ||
+                !projectPoint(*tri[1], face.screen[1], depthB) ||
+                !projectPoint(*tri[2], face.screen[2], depthC)) {
+                continue;
+            }
+            face.depth = (depthA + depthB + depthC) / 3.0;
+            face.color = kCenterCubeColor;
+            face.visible = true;
+            faces.push_back(face);
+        }
+    }
+}
+
 void SceneViewCPU::paintEvent(QPaintEvent* /*event*/)
 {
     if (!m_camera) {
@@ -329,6 +377,9 @@ void SceneViewCPU::paintEvent(QPaintEvent* /*event*/)
 
     QVector<Face> faces;
     collectFaces(faces);
+    collectCenterCubeFaces(faces);
+    std::sort(faces.begin(), faces.end(),
+              [](const Face& lhs, const Face& rhs) { return lhs.depth > rhs.depth; });
 
     painter.setPen(Qt::NoPen);
     for (const Face& face : faces) {

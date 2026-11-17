@@ -150,6 +150,11 @@ void MainWindow::buildUi()
     m_shadowsCheckBox->setChecked(false);
     dateLayout->addWidget(m_shadowsCheckBox);
 
+    m_showCenterCubeCheckBox = new QCheckBox(tr("Show center cube"), timeBox);
+    m_showCenterCubeCheckBox->setObjectName(QStringLiteral("showCenterCubeCheckBox"));
+    m_showCenterCubeCheckBox->setChecked(false);
+    dateLayout->addWidget(m_showCenterCubeCheckBox);
+
     m_heightExaggerationSpin = new QDoubleSpinBox(timeBox);
     m_heightExaggerationSpin->setObjectName(QStringLiteral("heightExaggerationSpin"));
     m_heightExaggerationSpin->setRange(1.0, 20.0);
@@ -332,6 +337,7 @@ void MainWindow::buildUi()
     connect(m_jumpToEndButton, &QPushButton::clicked, this, &MainWindow::onJumpToEnd);
     connect(m_localTimeCheckBox, &QCheckBox::toggled, this, &MainWindow::onLocalTimeToggled);
     connect(m_shadowsCheckBox, &QCheckBox::toggled, this, &MainWindow::onShadowsToggled);
+    connect(m_showCenterCubeCheckBox, &QCheckBox::toggled, this, &MainWindow::onCenterCubeToggled);
     connect(m_heightExaggerationSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this, &MainWindow::onTerrainHeightExaggerationChanged);
 }
@@ -347,6 +353,13 @@ void MainWindow::onShadowsToggled(bool checked)
 {
     if (m_sceneView) {
         m_sceneView->setShadowsEnabled(checked);
+    }
+}
+
+void MainWindow::onCenterCubeToggled(bool checked)
+{
+    if (m_sceneView) {
+        m_sceneView->setCenterCubeVisible(checked);
     }
 }
 

@@ -94,6 +94,62 @@ double clamp01(double value)
     return std::min(1.0, std::max(0.0, value));
 }
 
+/// Appends the 12 triangles (36 vertices) of a solid-colour cube built from
+/// 8 corners (bottom face 0-3, top face 4-7, both counter-clockwise seen
+/// from above) to gpuVertices, applying the terrain height exaggeration to
+/// the z coordinate.
+template <typename VertexT>
+void appendCubeTriangles(const std::vector<geo::Vector3>& corners, double heightExaggeration,
+                         const float color[3], std::vector<VertexT>& gpuVertices)
+{
+    if (corners.size() < 8) {
+        return;
+    }
+
+    const auto exaggerated = [&](const geo::Vector3& p) {
+        geo::Vector3 r = p;
+        r.z *= heightExaggeration;
+        return r;
+    };
+
+    constexpr int kFaceIndices[6][4] = {
+        {0, 1, 2, 3}, // bottom
+        {4, 7, 6, 5}, // top
+        {0, 4, 5, 1}, // south
+        {1, 5, 6, 2}, // east
+        {2, 6, 7, 3}, // north
+        {3, 7, 4, 0}, // west
+    };
+
+    for (const auto& face : kFaceIndices) {
+        const geo::Vector3 a = exaggerated(corners[face[0]]);
+        const geo::Vector3 b = exaggerated(corners[face[1]]);
+        const geo::Vector3 c = exaggerated(corners[face[2]]);
+        const geo::Vector3 d = exaggerated(corners[face[3]]);
+
+        for (const geo::Vector3* tri : {&a, &b, &c}) {
+            VertexT vertex{};
+            vertex.position[0] = static_cast<float>(tri->x);
+            vertex.position[1] = static_cast<float>(tri->y);
+            vertex.position[2] = static_cast<float>(tri->z);
+            vertex.color[0] = color[0];
+            vertex.color[1] = color[1];
+            vertex.color[2] = color[2];
+            gpuVertices.push_back(vertex);
+        }
+        for (const geo::Vector3* tri : {&a, &c, &d}) {
+            VertexT vertex{};
+            vertex.position[0] = static_cast<float>(tri->x);
+            vertex.position[1] = static_cast<float>(tri->y);
+            vertex.position[2] = static_cast<float>(tri->z);
+            vertex.color[0] = color[0];
+            vertex.color[1] = color[1];
+            vertex.color[2] = color[2];
+            gpuVertices.push_back(vertex);
+        }
+    }
+}
+
 const char* kShaderSource = R"WGSL(
 struct Uniforms {
     viewProj : mat4x4<f32>,
@@ -429,6 +485,12 @@ void SceneViewWEBGPU::onShadowsEnabledChanged()
     update();
 }
 
+void SceneViewWEBGPU::onCenterCubeVisibleChanged()
+{
+    m_geometryDirty = true;
+    update();
+}
+
 void SceneViewWEBGPU::rebuildGeometry()
 {
     m_geometryDirty = true;
@@ -505,6 +567,12 @@ void SceneViewWEBGPU::uploadGeometryIfDirty()
     }
 
     m_vertexCount = static_cast<std::uint32_t>(gpuVertices.size());
+
+    if (m_centerCubeVisible && m_hasCenterCross) {
+        appendCubeTriangles(m_centerCubeCorners, m_terrainHeightExaggeration, kCenterCrossColor,
+                            gpuVertices);
+        m_vertexCount = static_cast<std::uint32_t>(gpuVertices.size());
+    }
 
     if (m_vertexBuffer) {
         wgpuBufferRelease(m_vertexBuffer);
