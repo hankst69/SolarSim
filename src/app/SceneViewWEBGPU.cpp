@@ -96,8 +96,10 @@ double clamp01(double value)
 
 /// Appends the 12 triangles (36 vertices) of a solid-colour cube built from
 /// 8 corners (bottom face 0-3, top face 4-7, both counter-clockwise seen
-/// from above) to gpuVertices, applying the terrain height exaggeration to
-/// the z coordinate.
+/// from above) to gpuVertices. The cube's own 10m edge length is never
+/// stretched; only its base position is shifted vertically by the same
+/// amount the exaggerated terrain surface moves, so the cube keeps sitting
+/// on the (exaggerated) ground instead of sinking below it.
 template <typename VertexT>
 void appendCubeTriangles(const std::vector<geo::Vector3>& corners, double heightExaggeration,
                          const float color[3], std::vector<VertexT>& gpuVertices)
@@ -106,9 +108,13 @@ void appendCubeTriangles(const std::vector<geo::Vector3>& corners, double height
         return;
     }
 
-    const auto exaggerated = [&](const geo::Vector3& p) {
+    // Corners 0-3 are the bottom face, all sharing the terrain base height.
+    const double baseZ = corners[0].z;
+    const double shiftZ = baseZ * heightExaggeration - baseZ;
+
+    const auto shifted = [&](const geo::Vector3& p) {
         geo::Vector3 r = p;
-        r.z *= heightExaggeration;
+        r.z += shiftZ;
         return r;
     };
 
@@ -122,10 +128,10 @@ void appendCubeTriangles(const std::vector<geo::Vector3>& corners, double height
     };
 
     for (const auto& face : kFaceIndices) {
-        const geo::Vector3 a = exaggerated(corners[face[0]]);
-        const geo::Vector3 b = exaggerated(corners[face[1]]);
-        const geo::Vector3 c = exaggerated(corners[face[2]]);
-        const geo::Vector3 d = exaggerated(corners[face[3]]);
+        const geo::Vector3 a = shifted(corners[face[0]]);
+        const geo::Vector3 b = shifted(corners[face[1]]);
+        const geo::Vector3 c = shifted(corners[face[2]]);
+        const geo::Vector3 d = shifted(corners[face[3]]);
 
         for (const geo::Vector3* tri : {&a, &b, &c}) {
             VertexT vertex{};
@@ -569,7 +575,8 @@ void SceneViewWEBGPU::uploadGeometryIfDirty()
     m_vertexCount = static_cast<std::uint32_t>(gpuVertices.size());
 
     if (m_centerCubeVisible && m_hasCenterCross) {
-        appendCubeTriangles(m_centerCubeCorners, 1.0, kCenterCrossColor, gpuVertices);
+        appendCubeTriangles(m_centerCubeCorners, m_terrainHeightExaggeration, kCenterCrossColor,
+                            gpuVertices);
         m_vertexCount = static_cast<std::uint32_t>(gpuVertices.size());
     }
 

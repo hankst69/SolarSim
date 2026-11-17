@@ -289,8 +289,16 @@ void SceneViewCPU::collectCenterCubeFaces(QVector<Face>& faces)
 
     std::vector<geo::Vector3> corners;
     corners.reserve(8);
+    // The cube's own 10m edge length is never stretched by the height
+    // exaggeration; only its base position is shifted vertically by the
+    // same amount the exaggerated terrain surface moves, so it keeps
+    // sitting on the (exaggerated) ground instead of sinking below it.
+    const double baseZ = m_centerCubeCorners[0].z;
+    const double shiftZ = baseZ * m_terrainHeightExaggeration - baseZ;
     for (const geo::Vector3& corner : m_centerCubeCorners) {
-        corners.push_back(corner);
+        geo::Vector3 p = corner;
+        p.z += shiftZ;
+        corners.push_back(p);
     }
 
     constexpr int kFaceIndices[6][4] = {
