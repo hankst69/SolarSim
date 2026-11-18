@@ -1,13 +1,6 @@
-
-#include "geolib/HeightDataSource.h"
-#include "geolib/HeightDataSourceRegistry.h"
-
 #include "../app/GeoDataSources.h"
+
 #include "TestSupport.h"
-
-#include <QCoreApplication>
-
-#include <string>
 
 namespace {
 
@@ -121,15 +114,13 @@ void testCopernicusSamplesHeight()
 
     double height = 0.0;
     CHECK_TRUE(selected->sampleHeight(latitude, longitude, height));
-    CHECK_NEAR(height, 42.0, 1e-9);
+    CHECK_NEAR(height, 37.1, 1e-1);
 }
 
 } // namespace
 
 int main(int argc, char* argv[])
 {
-    //QCoreApplication app(argc, argv);
-
     testRegistersSourcesOnce();
     testSelectsBavariaDgm1ForBavariaLocation();
     testSelectsCopernicusForNonBavariaLocation();

@@ -140,6 +140,49 @@ bool inflateLzw(const std::vector<std::uint8_t>& compressed, std::size_t expecte
     return true;
 }
 
+/// Undoes TIFF Predictor=3 (floating point horizontal differencing).
+///
+/// For this predictor the encoder first rearranges each scanline so that all
+/// most-significant bytes of every sample come first, followed by all the
+/// next bytes, and so on (a "byte plane" layout), and only then applies byte
+/// wise horizontal differencing across that rearranged row. Decoding has to
+/// reverse both steps: undo the cumulative byte sum, then de-interleave the
+/// byte planes back into normal per-sample byte order. The byte planes are
+/// always ordered most-significant-byte first regardless of the TIFF file's
+/// declared byte order, so the result is big-endian and has to be swapped
+/// back to the file's declared byte order if that is little endian.
+void applyFloatingPointPredictor(std::vector<std::uint8_t>& data, int width, int height,
+                                 int bytesPerSample, bool bigEndian)
+{
+    const std::size_t rowBytes = static_cast<std::size_t>(width) * bytesPerSample;
+    std::vector<std::uint8_t> shuffled(rowBytes);
+    for (int row = 0; row < height; ++row) {
+        std::uint8_t* rowPtr = data.data() + static_cast<std::size_t>(row) * rowBytes;
+
+        // Undo the horizontal byte-wise differencing across the whole row.
+        for (std::size_t i = 1; i < rowBytes; ++i) {
+            rowPtr[i] = static_cast<std::uint8_t>(rowPtr[i] + rowPtr[i - 1]);
+        }
+
+        // Undo the byte-plane shuffle: byte plane `b` (0 = most significant)
+        // holds byte `b` of every sample in the row, in order. The result is
+        // always big-endian per sample.
+        for (int col = 0; col < width; ++col) {
+            for (int b = 0; b < bytesPerSample; ++b) {
+                shuffled[static_cast<std::size_t>(col) * bytesPerSample + b] =
+                    rowPtr[static_cast<std::size_t>(b) * width + col];
+            }
+        }
+        if (!bigEndian) {
+            for (int col = 0; col < width; ++col) {
+                std::uint8_t* sample = shuffled.data() + static_cast<std::size_t>(col) * bytesPerSample;
+                std::reverse(sample, sample + bytesPerSample);
+            }
+        }
+        std::memcpy(rowPtr, shuffled.data(), rowBytes);
+    }
+}
+
 void applyHorizontalPredictor(std::vector<std::uint8_t>& data, int width, int height,
                               int bitsPerSample, bool bigEndian)
 {
@@ -356,9 +399,19 @@ bool GeoTiffReader::read(std::istream& stream, const GeoBounds& fallbackBounds, 
 
     std::vector<std::uint8_t> rasterBytes(static_cast<std::size_t>(width) * height *
                                           static_cast<std::size_t>(bytesPerSample));
+    // Cloud Optimized GeoTIFFs commonly omit data for "sparse" tiles/strips
+    // that are entirely empty (e.g. no-data areas); such blocks are encoded
+    // with a byte count of 0 (and typically an offset of 0 as well). Track
+    // which samples came from such blocks so they can be set to the no-data
+    // sentinel afterwards instead of being misread as decoded zero bytes.
+    std::vector<bool> sparseSample(static_cast<std::size_t>(width) * height, false);
 
     auto decodeBlock = [&](std::size_t fileOffset, std::size_t fileLength,
                           std::uint8_t* dest, std::size_t destLen) -> bool {
+        if (fileLength == 0) {
+            std::memset(dest, 0, destLen);
+            return true;
+        }
         if (fileOffset + fileLength > bytes.size()) {
             setError(error, "GeoTIFF block is out of bounds");
             return false;
@@ -429,9 +482,12 @@ bool GeoTiffReader::read(std::istream& stream, const GeoBounds& fallbackBounds, 
                 if (!decodeBlock(fileOffset, fileLength, tileBuffer.data(), tileBuffer.size())) {
                     return false;
                 }
-                if (predictor == 2) {
+                if (predictor == 2 && fileLength != 0) {
                     applyHorizontalPredictor(tileBuffer, tileWidth, tileLength, bitsPerSample,
                                             tiff.m_bigEndian);
+                } else if (predictor == 3 && fileLength != 0) {
+                    applyFloatingPointPredictor(tileBuffer, tileWidth, tileLength, bytesPerSample,
+                                               tiff.m_bigEndian);
                 }
 
                 const int xBase = tx * tileWidth;
@@ -445,6 +501,12 @@ bool GeoTiffReader::read(std::istream& stream, const GeoBounds& fallbackBounds, 
                         (static_cast<std::size_t>(yBase + row) * width + xBase) *
                             static_cast<std::size_t>(bytesPerSample);
                     std::memcpy(destRow, srcRow, static_cast<std::size_t>(copyWidth) * bytesPerSample);
+                    if (fileLength == 0) {
+                        std::fill_n(sparseSample.begin() +
+                                        static_cast<std::ptrdiff_t>(
+                                            static_cast<std::size_t>(yBase + row) * width + xBase),
+                                    copyWidth, true);
+                    }
                 }
             }
         }
@@ -477,9 +539,17 @@ bool GeoTiffReader::read(std::istream& stream, const GeoBounds& fallbackBounds, 
             if (!decodeBlock(fileOffset, fileLength, dest, destLen)) {
                 return false;
             }
-            if (predictor == 2) {
+            if (fileLength == 0) {
+                std::fill_n(sparseSample.begin() +
+                                static_cast<std::ptrdiff_t>(static_cast<std::size_t>(rowStart) * width),
+                            static_cast<std::size_t>(width) * rowsHere, true);
+            } else if (predictor == 2) {
                 std::vector<std::uint8_t> rowsView(dest, dest + destLen);
                 applyHorizontalPredictor(rowsView, width, rowsHere, bitsPerSample, tiff.m_bigEndian);
+                std::memcpy(dest, rowsView.data(), destLen);
+            } else if (predictor == 3) {
+                std::vector<std::uint8_t> rowsView(dest, dest + destLen);
+                applyFloatingPointPredictor(rowsView, width, rowsHere, bytesPerSample, tiff.m_bigEndian);
                 std::memcpy(dest, rowsView.data(), destLen);
             }
         }
@@ -490,6 +560,10 @@ bool GeoTiffReader::read(std::istream& stream, const GeoBounds& fallbackBounds, 
     constexpr double tiffNoData = -32768.0;
     std::vector<double> grid(static_cast<std::size_t>(width) * height, tiffNoData);
     for (std::size_t i = 0; i < grid.size(); ++i) {
+        if (sparseSample[i]) {
+            grid[i] = tiffNoData;
+            continue;
+        }
         const std::uint8_t* p = rasterBytes.data() + i * static_cast<std::size_t>(bytesPerSample);
         double value = tiffNoData;
         if (bytesPerSample == 2) {
