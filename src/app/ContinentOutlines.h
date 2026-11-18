@@ -75,73 +75,16 @@ inline const QVector<QVector<QPointF>>& continentOutlines()
     return outlines;
 }
 
-namespace detail {
-
-/// Catmull-Rom interpolation of a closed polygon, used to turn the coarse,
-/// hand-authored outlines above into smoother, more natural looking
-/// coastlines for the higher resolution floating preview. This does not add
-/// genuine geographic detail, but avoids the obviously blocky look of the
-/// low vertex-count polygons when zoomed in.
-inline QPointF catmullRom(const QPointF& p0, const QPointF& p1, const QPointF& p2, const QPointF& p3, double t)
-{
-    const double t2 = t * t;
-    const double t3 = t2 * t;
-
-    const double x = 0.5 * ((2.0 * p1.x())
-        + (-p0.x() + p2.x()) * t
-        + (2.0 * p0.x() - 5.0 * p1.x() + 4.0 * p2.x() - p3.x()) * t2
-        + (-p0.x() + 3.0 * p1.x() - 3.0 * p2.x() + p3.x()) * t3);
-
-    const double y = 0.5 * ((2.0 * p1.y())
-        + (-p0.y() + p2.y()) * t
-        + (2.0 * p0.y() - 5.0 * p1.y() + 4.0 * p2.y() - p3.y()) * t2
-        + (-p0.y() + 3.0 * p1.y() - 3.0 * p2.y() + p3.y()) * t3);
-
-    return QPointF(x, y);
-}
-
-inline QVector<QPointF> smoothClosedPolygon(const QVector<QPointF>& polygon, int subdivisionsPerSegment)
-{
-    const int n = polygon.size();
-    if (n < 4 || subdivisionsPerSegment <= 1) {
-        return polygon;
-    }
-
-    QVector<QPointF> smoothed;
-    smoothed.reserve(n * subdivisionsPerSegment);
-
-    for (int i = 0; i < n; ++i) {
-        const QPointF& p0 = polygon[(i - 1 + n) % n];
-        const QPointF& p1 = polygon[i];
-        const QPointF& p2 = polygon[(i + 1) % n];
-        const QPointF& p3 = polygon[(i + 2) % n];
-
-        for (int s = 0; s < subdivisionsPerSegment; ++s) {
-            const double t = static_cast<double>(s) / subdivisionsPerSegment;
-            smoothed.append(catmullRom(p0, p1, p2, p3, t));
-        }
-    }
-
-    return smoothed;
-}
-
-} // namespace detail
-
-/// Smoothed, higher resolution version of continentOutlines(), intended for
-/// use when the location map is shown enlarged (e.g. in the floating
-/// hover preview) where the coarse polygon edges of the base outlines
-/// would otherwise be clearly visible.
+/// Higher resolution continent/coastline outlines, derived from the Natural
+/// Earth 1:50m land polygons (https://www.naturalearthdata.com/downloads/
+/// 50m-physical-vectors/50m-land/), simplified with the Douglas-Peucker
+/// algorithm. Used when the location map is shown enlarged (e.g. in the
+/// floating hover preview) where the coarse polygon edges of the base
+/// outlines above would otherwise be clearly visible.
 inline const QVector<QVector<QPointF>>& continentOutlinesDetailed()
 {
-    static const QVector<QVector<QPointF>> detailedOutlines = [] {
-        QVector<QVector<QPointF>> result;
-        result.reserve(continentOutlines().size());
-        for (const auto& outline : continentOutlines()) {
-            result.append(detail::smoothClosedPolygon(outline, 8));
-        }
-        return result;
-    }();
-    return detailedOutlines;
+#include "ContinentOutlinesDetailed.inc"
+    return kDetailedOutlines;
 }
 
 } // namespace app
