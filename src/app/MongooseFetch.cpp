@@ -8,6 +8,7 @@ extern "C" {
 #include <QByteArray>
 
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -33,6 +34,9 @@ struct MgFetchState {
     std::string location;
     std::string body;
     std::string error;
+    // -1 means no Content-Length header was present (e.g. chunked transfer).
+    long long contentLength{-1};
+    bool truncated{false};
 };
 
 std::string resolveRedirect(const std::string& baseUrl, const std::string& location)
@@ -121,6 +125,22 @@ void mgFetchHandler(mg_connection* c, int ev, void* evData)
             s->location.assign(loc->buf, loc->len);
         }
         s->body.assign(hm->body.buf, hm->body.len);
+        // Mongoose still delivers MG_EV_HTTP_MSG when the peer closes the
+        // connection before all Content-Length bytes arrived (it just
+        // reports whatever partial body made it into the receive buffer).
+        // Detect that case explicitly so truncated downloads are not mistaken
+        // for successful ones.
+        if (mg_str* cl = mg_http_get_header(hm, "Content-Length")) {
+            const std::string clStr(cl->buf, cl->len);
+            char* end = nullptr;
+            const long long expected = std::strtoll(clStr.c_str(), &end, 10);
+            if (end != clStr.c_str() && expected >= 0) {
+                s->contentLength = expected;
+                if (static_cast<long long>(s->body.size()) < expected) {
+                    s->truncated = true;
+                }
+            }
+        }
         c->is_closing = 1;
         s->done = true;
     } else if (ev == MG_EV_ERROR) {
@@ -161,6 +181,8 @@ bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
         state.location.clear();
         state.body.clear();
         state.error.clear();
+        state.contentLength = -1;
+        state.truncated = false;
 
         mg_mgr mgr;
         mg_mgr_init(&mgr);
@@ -193,7 +215,7 @@ bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
         break;
     }
 
-    if (!state.gotResponse || state.status != 200) {
+    if (!state.gotResponse || state.status != 200 || state.truncated) {
         return false;
     }
 
