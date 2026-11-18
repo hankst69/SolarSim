@@ -20,6 +20,7 @@ add_library(geolib
     src/data_sources/BavariaDgm1TileDownloader.cpp
     src/data_sources/BavariaDgm1TileReader.cpp
     src/data_sources/BngGridTile.cpp
+    src/data_sources/GeoTiffReader.cpp
     src/data_sources/WorldCopernicusDem30HeightDataSource.cpp
     src/data_sources/WorldCopernicusDem30TileDownloader.cpp
     src/data_sources/WorldCopernicusDem30TileReader.cpp

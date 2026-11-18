@@ -11,7 +11,12 @@ namespace geo {
 
 /// Reader for the tile files of the global Copernicus DEM GLO-30 data set.
 ///
-/// Two formats are supported:
+/// Three formats are supported:
+///  * TIF/TIFF - the official delivery format: a (Cloud Optimized) GeoTIFF
+///           with a single band of Int16 or Float32 samples, uncompressed or
+///           Deflate/LZW compressed, organised in strips or tiles. The
+///           GeoTIFF georeference keys are evaluated if present, otherwise
+///           `bounds` is used as a fallback.
 ///  * HGT  - the plain SRTM style raster many GLO-30 mirrors provide: big
 ///           endian signed 16 bit samples, north row first, covering exactly
 ///           one degree square (usually 3601 x 3601 or 1201 x 1201 samples).
@@ -26,8 +31,9 @@ namespace geo {
 class WorldCopernicusDem30TileReader {
 public:
     /// Auto detects the format from the file extension (".asc" -> ASCII grid,
-    /// everything else -> HGT) and reads the tile. `bounds` is used for the
-    /// formats that carry no georeference.
+    /// ".tif"/".tiff" -> GeoTIFF, everything else -> HGT) and reads the tile.
+    /// `bounds` is used as a fallback for formats that carry no (or an
+    /// unrecognised) georeference.
     static std::shared_ptr<GridHeightDataSource> readFile(const std::string& path,
                                                           const GeoBounds& bounds,
                                                           std::string* error = nullptr);
@@ -38,6 +44,12 @@ public:
 
     static std::shared_ptr<GridHeightDataSource> readAsciiGrid(std::istream& stream,
                                                                std::string* error = nullptr);
+
+    /// Parses a (Cloud Optimized) GeoTIFF tile. `bounds` is used only if the
+    /// file carries no usable GeoTIFF georeference tags.
+    static std::shared_ptr<GridHeightDataSource> readGeoTiff(std::istream& stream,
+                                                             const GeoBounds& bounds,
+                                                             std::string* error = nullptr);
 };
 
 } // namespace geo

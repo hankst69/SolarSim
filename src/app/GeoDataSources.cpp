@@ -144,7 +144,7 @@ void GeoDataSources::registerDataSources()
     geo::WorldCopernicusDem30TileDownloader::Config worldConfig{};
     worldConfig.cacheDirectory = cacheDirectoryFor("height_data_cache/world_copernicus_dem30");
     worldConfig.baseUrl = "https://copernicus-dem-30m.s3.amazonaws.com";
-    worldConfig.fileExtension = ".hgt";
+    worldConfig.fileExtension = ".tif";
     worldConfig.allowDownload = true;
 
     static const std::string kCopernicusUserName = "";

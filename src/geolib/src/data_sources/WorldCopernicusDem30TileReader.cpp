@@ -1,5 +1,7 @@
 #include "geolib/data_sources/WorldCopernicusDem30TileReader.h"
 
+#include "geolib/data_sources/GeoTiffReader.h"
+
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -148,6 +150,18 @@ std::shared_ptr<GridHeightDataSource> WorldCopernicusDem30TileReader::readAsciiG
                                                  cellSize * kMetresPerDegree, noData);
 }
 
+std::shared_ptr<GridHeightDataSource> WorldCopernicusDem30TileReader::readGeoTiff(std::istream& stream,
+                                                                            const GeoBounds& bounds,
+                                                                            std::string* error)
+{
+    GeoTiffReader::Raster raster;
+    GeoTiffReader reader;
+    if (!reader.read(stream, bounds, raster, error)) {
+        return nullptr;
+    }
+    return GeoTiffReader::toGridHeightDataSource(raster, "Copernicus DEM GLO-30 tile");
+}
+
 std::shared_ptr<GridHeightDataSource> WorldCopernicusDem30TileReader::readFile(const std::string& path,
                                                                          const GeoBounds& bounds,
                                                                          std::string* error)
@@ -163,6 +177,15 @@ std::shared_ptr<GridHeightDataSource> WorldCopernicusDem30TileReader::readFile(c
             return nullptr;
         }
         return readAsciiGrid(stream, error);
+    }
+
+    if (extension == ".tif" || extension == ".tiff") {
+        std::ifstream stream(path, std::ios::binary);
+        if (!stream) {
+            setError(error, "cannot open file: " + path);
+            return nullptr;
+        }
+        return readGeoTiff(stream, bounds, error);
     }
 
     std::ifstream stream(path, std::ios::binary);

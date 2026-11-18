@@ -55,6 +55,9 @@ std::string joinPath(const std::string& directory, const std::string& fileName)
 
 } // namespace
 
+
+// https://copernicus-dem-30m.s3.amazonaws.com/readme.html
+
 WorldCopernicusDem30TileDownloader::WorldCopernicusDem30TileDownloader(Config config, FetchFunction fetch)
     : m_config(std::move(config)), m_fetch(std::move(fetch))
 {

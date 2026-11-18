@@ -2,7 +2,9 @@
 
 #include "TestSupport.h"
 
+#include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -149,6 +151,106 @@ void testMalformedInput()
     CHECK_FALSE(error.empty());
 }
 
+namespace {
+
+void putU16(std::vector<unsigned char>& buf, std::uint16_t v)
+{
+    buf.push_back(static_cast<unsigned char>(v & 0xFF));
+    buf.push_back(static_cast<unsigned char>((v >> 8) & 0xFF));
+}
+
+void putU32(std::vector<unsigned char>& buf, std::uint32_t v)
+{
+    buf.push_back(static_cast<unsigned char>(v & 0xFF));
+    buf.push_back(static_cast<unsigned char>((v >> 8) & 0xFF));
+    buf.push_back(static_cast<unsigned char>((v >> 16) & 0xFF));
+    buf.push_back(static_cast<unsigned char>((v >> 24) & 0xFF));
+}
+
+/// Writes a minimal uncompressed, single strip, Float32 GeoTIFF (little
+/// endian) with a square raster of `side` x `side` samples, each equal to its
+/// row index times 10 plus its column index. Carries no GeoTIFF
+/// georeference, so the caller supplied bounds are used.
+void writeGeoTiff(const std::string& path, int side)
+{
+    std::vector<unsigned char> raster;
+    raster.reserve(static_cast<std::size_t>(side) * side * 4);
+    for (int row = 0; row < side; ++row) {
+        for (int column = 0; column < side; ++column) {
+            const float value = static_cast<float>(row * 10 + column);
+            unsigned char bytes[4];
+            std::memcpy(bytes, &value, 4);
+            raster.insert(raster.end(), bytes, bytes + 4);
+        }
+    }
+
+    // Layout: header(8) + IFD + raster.
+    constexpr int kEntryCount = 8;
+    const std::size_t ifdOffset = 8;
+    const std::size_t ifdSize = 2 + static_cast<std::size_t>(kEntryCount) * 12 + 4;
+    const std::size_t rasterOffset = ifdOffset + ifdSize;
+
+    std::vector<unsigned char> buf;
+    buf.push_back('I');
+    buf.push_back('I');
+    putU16(buf, 42);
+    putU32(buf, static_cast<std::uint32_t>(ifdOffset));
+
+    putU16(buf, kEntryCount);
+
+    auto writeEntry = [&](std::uint16_t tag, std::uint16_t type, std::uint32_t count,
+                          std::uint32_t valueOrOffset) {
+        putU16(buf, tag);
+        putU16(buf, type);
+        putU32(buf, count);
+        putU32(buf, valueOrOffset);
+    };
+
+    writeEntry(256, 3, 1, static_cast<std::uint32_t>(side)); // ImageWidth
+    writeEntry(257, 3, 1, static_cast<std::uint32_t>(side)); // ImageLength
+    writeEntry(258, 3, 1, 32);                              // BitsPerSample
+    writeEntry(259, 3, 1, 1);                                // Compression = none
+    writeEntry(273, 4, 1, static_cast<std::uint32_t>(rasterOffset)); // StripOffsets
+    writeEntry(278, 3, 1, static_cast<std::uint32_t>(side));         // RowsPerStrip
+    writeEntry(279, 4, 1, static_cast<std::uint32_t>(raster.size())); // StripByteCounts
+    writeEntry(339, 3, 1, 3);                                        // SampleFormat = IEEE float
+
+    putU32(buf, 0); // next IFD offset
+
+    buf.resize(rasterOffset, 0);
+    buf.insert(buf.end(), raster.begin(), raster.end());
+
+    std::ofstream out(path, std::ios::binary);
+    out.write(reinterpret_cast<const char*>(buf.data()), static_cast<std::streamsize>(buf.size()));
+}
+
+} // namespace
+
+void testReadGeoTiff()
+{
+    const std::string path = "copernicus_test_tile.tif";
+    writeGeoTiff(path, 3);
+
+    std::string error;
+    const auto tile =
+        WorldCopernicusDem30TileReader::readFile(path, GeoBounds{48.0, 49.0, 11.0, 12.0}, &error);
+    CHECK_TRUE(tile != nullptr);
+    if (tile) {
+        CHECK_EQ_INT(tile->columns(), 3);
+        CHECK_EQ_INT(tile->rows(), 3);
+
+        double height = 0.0;
+        CHECK_TRUE(tile->sampleHeight(49.0, 11.0, height));
+        CHECK_NEAR(height, 0.0, 1e-6);
+        CHECK_TRUE(tile->sampleHeight(48.0, 12.0, height));
+        CHECK_NEAR(height, 22.0, 1e-6);
+        CHECK_TRUE(tile->sampleHeight(48.5, 11.5, height));
+        CHECK_NEAR(height, 11.0, 1e-6);
+    }
+
+    std::remove(path.c_str());
+}
+
 } // namespace
 
 int main()
@@ -158,5 +260,6 @@ int main()
     testReadAsciiGrid();
     testNoDataIsRejected();
     testMalformedInput();
+    testReadGeoTiff();
     return geotest::summarize("WorldCopernicusDem30TileReaderTests");
 }

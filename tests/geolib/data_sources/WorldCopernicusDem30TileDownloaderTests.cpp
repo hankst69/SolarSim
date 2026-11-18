@@ -46,6 +46,7 @@ WorldCopernicusDem30TileDownloader::Config makeConfig()
     WorldCopernicusDem30TileDownloader::Config config;
     config.cacheDirectory = kCacheDir;
     config.baseUrl = "https://example.invalid/glo30";
+    config.fileExtension = ".hgt";
     return config;
 }
 

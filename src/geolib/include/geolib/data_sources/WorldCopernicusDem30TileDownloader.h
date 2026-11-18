@@ -32,7 +32,7 @@ public:
         /// Base URL of the open data tile server (without trailing slash).
         std::string baseUrl{"https://copernicus-dem-30m.s3.amazonaws.com"};
         /// File extension of the tiles to request.
-        std::string fileExtension{".hgt"};
+        std::string fileExtension{".tif"};
         /// Allow downloading missing tiles. If false only the cache is used.
         bool allowDownload{true};
     };
