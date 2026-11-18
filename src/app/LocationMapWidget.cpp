@@ -94,11 +94,15 @@ void LocationMapWidget::drawMap(QPainter& painter, const QRectF& rect) const
     painter.drawLine(QPointF(rect.center().x(), rect.top()), QPointF(rect.center().x(), rect.bottom()));
     painter.drawLine(QPointF(rect.left(), rect.center().y()), QPointF(rect.right(), rect.center().y()));
 
-    // Simplified continent outlines, projected from (longitude, latitude)
-    // degrees to widget pixel coordinates (equirectangular projection).
+    // Continent outlines, projected from (longitude, latitude) degrees to
+    // widget pixel coordinates (equirectangular projection). The floating,
+    // enlarged preview uses the smoothed/higher resolution outlines since
+    // the coarse polygon edges of the base outlines are clearly visible
+    // when zoomed in.
     painter.setPen(QPen(QColor(60, 90, 50), 1));
     painter.setBrush(QColor(90, 140, 80));
-    for (const auto& outline : app::continentOutlines()) {
+    const auto& outlines = m_isFloatingPreview ? app::continentOutlinesDetailed() : app::continentOutlines();
+    for (const auto& outline : outlines) {
         QPainterPath path;
         for (int i = 0; i < outline.size(); ++i) {
             const double lon = outline[i].x();
