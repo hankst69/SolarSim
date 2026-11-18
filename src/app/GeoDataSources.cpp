@@ -127,7 +127,7 @@ void GeoDataSources::registerDataSources()
     geo::BavariaDgm1TileDownloader::FetchFunction byFetch =
         [this](const std::string& url, const std::string& targetPath) -> bool {
             m_progressCount++;
-            progress(m_progressCount, "downloadinig " + targetPath);
+            progress(m_progressCount, "downloading " + targetPath);
             if (isCanceled()) {
                 return false;
             }
@@ -153,7 +153,7 @@ void GeoDataSources::registerDataSources()
     geo::WorldCopernicusDem30TileDownloader::FetchFunction worldFetch =
         [this](const std::string& url, const std::string& targetPath) -> bool {
             m_progressCount++;
-            progress(m_progressCount, "downloadinig " + targetPath);
+            progress(m_progressCount, "downloading " + targetPath);
             if (isCanceled()) {
                 return false;
             }
