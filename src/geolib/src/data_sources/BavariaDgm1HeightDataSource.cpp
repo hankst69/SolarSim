@@ -70,7 +70,7 @@ bool BavariaDgm1HeightDataSource::sampleHeight(double latitudeDeg, double longit
             return true;
         }
     }
-
+/*
     // Close to a tile border the interpolation stencil reaches into the
     // neighbouring tile; try the adjacent tiles before giving up.
     const double localEast = easting - key.eastKm * 1000.0;
@@ -92,6 +92,7 @@ bool BavariaDgm1HeightDataSource::sampleHeight(double latitudeDeg, double longit
             }
         }
     }
+*/
     return false;
 }
 

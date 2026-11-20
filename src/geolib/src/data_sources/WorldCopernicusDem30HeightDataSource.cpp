@@ -74,7 +74,7 @@ bool WorldCopernicusDem30HeightDataSource::sampleHeight(double latitudeDeg, doub
             return true;
         }
     }
-
+/*
     // Exactly on a tile border the sample also belongs to the neighbouring
     // tile; try the adjacent tiles before giving up.
     const double localLat = latitudeDeg - key.latDeg;
@@ -96,6 +96,7 @@ bool WorldCopernicusDem30HeightDataSource::sampleHeight(double latitudeDeg, doub
             }
         }
     }
+*/
     return false;
 }
 
