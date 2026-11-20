@@ -157,7 +157,8 @@ void mgFetchHandler(mg_connection* c, int ev, void* evData)
 
 
 bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
-                      const std::string& userName, const std::string& password)
+                      const std::string& userName, const std::string& password,
+                      const int timeOutSeconds)
 {
 #if DEBUG
     printf("fetchUrlMongoose()... url='%s' targetPath='%s' userName='%s'\n", url.c_str(), targetPath.c_str(), userName.c_str());
@@ -165,7 +166,7 @@ bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
     mg_log_set_fn(console_print_char, nullptr);
 
     constexpr int kMaxRedirects = 5;
-    constexpr auto kTimeout = std::chrono::seconds(120);
+    const auto kTimeout = timeOutSeconds > 0 ? std::chrono::seconds(timeOutSeconds) : std::chrono::seconds(120);
 
     MgFetchState state;
     state.url = url;
@@ -192,9 +193,16 @@ bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
             return false;
         }
 
-        const auto deadline = std::chrono::steady_clock::now() + kTimeout;
-        while (!state.done && std::chrono::steady_clock::now() < deadline) {
-            mg_mgr_poll(&mgr, 50);
+        if (timeOutSeconds > 0) {
+            const auto deadline = std::chrono::steady_clock::now() + kTimeout;
+            while (!state.done && std::chrono::steady_clock::now() < deadline) {
+                mg_mgr_poll(&mgr, 100);
+            }
+        }
+        else {
+            while (!state.done) {
+                mg_mgr_poll(&mgr, 200);
+            }
         }
         mg_mgr_free(&mgr);
 
@@ -215,7 +223,7 @@ bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
         break;
     }
 
-    if (!state.gotResponse || state.status != 200 || state.truncated) {
+    if (!state.gotResponse || state.status != 200 /*|| state.truncated*/) {
         return false;
     }
 
@@ -249,7 +257,9 @@ bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
         fs::remove(tmp, ec);
         return false;
     }
-    return true;
+    
+    //return true;
+    return !state.truncated;
 }
 
 } // namespace app

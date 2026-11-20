@@ -8,6 +8,7 @@ namespace app {
 /// using Mongoose. Blocking, thread-safe, no event loop required.
 /// Follows redirects, optionally sending HTTP Basic auth credentials.
 bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
-                      const std::string& userName, const std::string& password);
+                      const std::string& userName, const std::string& password,
+                      const int timeOutSeconds = 0);
 
 } // namespace app

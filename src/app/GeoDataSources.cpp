@@ -28,8 +28,9 @@ namespace app {
 
 GeoDataSources::GeoDataSources() 
 {
-    m_height_data_sources_registry = &(geo::HeightDataSourceRegistry::instance());
+    //m_height_data_sources_registry = &(geo::HeightDataSourceRegistry::instance());
     //m_texture_data_sources_registry = &(geo::TextureDataSourceRegistry::instance());
+    registerDataSources();
 }
 
 GeoDataSources::~GeoDataSources() = default;
@@ -81,24 +82,17 @@ bool GeoDataSources::fetchUrl(const std::string& url, const std::string& targetP
 
 std::string GeoDataSources::cacheDirectoryFor(const std::string& subDirectory)
 {
-    const QString base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    //const QString base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
     //return QDir(base).filePath(QString::fromStdString(subDirectory)).toStdString();
-    const QByteArray utf8 = QDir(base + QStringLiteral("/../"))
+
+    const QString base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    auto baseDir = QDir(base);  
+    //baseDir.cdUp();
+
+    const QByteArray targetDir_utf8 = baseDir
         .filePath(QString::fromUtf8(subDirectory.c_str()))
         .toUtf8();
-    return std::string(utf8.constData(), static_cast<std::size_t>(utf8.size()));
-    //// attention:
-    //// QString::fromStdString() works in tests and Example but not in actual Qt Application
-    //// for now we use QString(stdstring.c_str()) instead
-    //auto dir = QDir(base + "/../");
-    //auto relpath = QString(subDirectory.c_str());
-    //auto fullpath = dir.filePath(relpath);
-    ////https://stackoverflow.com/questions/4214369/how-to-convert-qstring-to-stdstring
-    //auto std_text = fullpath.toStdString();
-    //auto utf8_text = fullpath.toUtf8().constData();
-    //auto current_locale_text = fullpath.toLocal8Bit().constData();
-    //auto stdpath = std::string(current_locale_text);
-    //return stdpath;
+    return std::string(targetDir_utf8.constData(), static_cast<std::size_t>(targetDir_utf8.size()));
 }
 
 
@@ -134,7 +128,9 @@ void GeoDataSources::registerDataSources()
             return app::fetchUrlMongoose(url, targetPath, {}, {});
         };
 
-    m_bavariaDgm1TileDownloader = std::make_shared<geo::BavariaDgm1TileDownloader>(byConfig, byFetch);
+    m_bavariaDgm1TileDownloader = std::make_shared<geo::BavariaDgm1TileDownloader>(
+        byConfig,
+        byFetch);
 
     m_height_data_sources_registry->addSource(
         std::make_shared<geo::BavariaDgm1HeightDataSource>(m_bavariaDgm1TileDownloader->tileLoader())
@@ -160,7 +156,9 @@ void GeoDataSources::registerDataSources()
             return app::fetchUrlMongoose(url, targetPath, kCopernicusUserName, kCopernicusPassword);
     };
 
-    m_worldDem30TileDownloader = std::make_shared<geo::WorldCopernicusDem30TileDownloader>(worldConfig, worldFetch);
+    m_worldDem30TileDownloader = std::make_shared<geo::WorldCopernicusDem30TileDownloader>(
+        worldConfig, 
+        worldFetch);
 
     m_height_data_sources_registry->addSource(
         std::make_shared<geo::WorldCopernicusDem30HeightDataSource>(m_worldDem30TileDownloader->tileLoader())

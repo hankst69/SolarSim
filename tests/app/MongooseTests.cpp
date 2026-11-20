@@ -1,41 +1,41 @@
-#include "TestSupport.h"
-
+#include "MongooseFetch.h"
 extern "C" {
 #include "mongoose.h"
 }
-#include <filesystem>
-#include "MongooseFetch.h"
 
+
+#include "TestSupport.h"
+#include <filesystem>
+namespace fs = std::filesystem;
 
 namespace {
 
-    void testMongooseDownload()
+    void testMongooseDownload(const char* url, const fs::path &targetPath)
     {
-        namespace fs = std::filesystem;
+        printf("\n*** testMongooseDownload ***\n");
 
-        const fs::path tempDir = fs::temp_directory_path() / "SolarSimTests";
-        std::error_code ec;
-        fs::create_directories(tempDir, ec);
-        CHECK_TRUE(!ec);
-
-        const fs::path targetPath = tempDir / "test_download.zip";
+        printf(" fetchUrlMongoose(url,file)\n  url  : '%s'\n  file : '%s'\n\n",
+            url,
+            targetPath.string().c_str());
 
         // Ensure a clean slate in case a previous run left the file behind.
+        std::error_code ec;
         fs::remove(targetPath, ec);
 
-        //https://download1.bayernwolke.de/a/dgm/dgm1xyz/655_5487.zip
-        bool ok = app::fetchUrlMongoose("https://download1.bayernwolke.de/a/dgm/dgm1xyz/655_5487.zip", targetPath.string(), "", "");
+        bool ok = app::fetchUrlMongoose(url, targetPath.string(), "", "");
         CHECK_TRUE(ok);
 
         CHECK_TRUE(fs::exists(targetPath));
         CHECK_TRUE(fs::file_size(targetPath, ec) > 0 && !ec);
 
         // Cleanup
-        fs::remove(targetPath, ec);
+        //fs::remove(targetPath, ec);
     }
 
     void testMongooseDns()
     {
+        printf("\n*** testMongooseDns ***\n");
+
         mg_mgr mgr;
         mg_mgr_init(&mgr);
 
@@ -65,9 +65,18 @@ namespace {
 
 int main(int argc, char* argv[])
 {
-    testMongooseDownload();
+    const fs::path tempDir = fs::temp_directory_path() / "SolarSimTests";
+    std::error_code ec;
+    fs::create_directories(tempDir, ec);
+    CHECK_TRUE(!ec);
 
-    //testMongooseDns();
+    const fs::path targetPath_1 = tempDir / "test_download_bavaria_dgm1.zip";
+    testMongooseDownload("https://download1.bayernwolke.de/a/dgm/dgm1xyz/655_5487.zip", targetPath_1);
+
+    const fs::path targetPath_2 = tempDir / "test_download_world_copernicus_dem30.tif";
+    testMongooseDownload("https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N46_00_E009_00_DEM/Copernicus_DSM_COG_10_N46_00_E009_00_DEM.tif", targetPath_2);
+
+    testMongooseDns();
 
     return geotest::summarize("MongooseTests");
 }

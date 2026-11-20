@@ -1,4 +1,5 @@
 ﻿{
+  "environments": [ { "BuildRoot": "${projectDir}\\out\\build\\${name}" } ],
   "configurations": [
     {
       "name": "VS-x64-Debug",
