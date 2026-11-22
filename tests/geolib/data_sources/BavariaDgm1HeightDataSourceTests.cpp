@@ -194,6 +194,8 @@ int main()
     testNegativeResultsAreCached();
     testLoadedTilesAreCached();
     testMissingLoaderYieldsNoData();
+#ifdef GEOLIB_ENABLE_NEIGHBOUR_TILE_FALLBACK
     testBorderFallsBackToNeighbourTile();
+#endif
     return geotest::summarize("BavariaDgm1HeightDataSourceTests");
 }

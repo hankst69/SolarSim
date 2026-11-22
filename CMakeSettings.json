@@ -81,7 +81,14 @@
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
-      "ctestCommandArgs": ""
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "GEOLIB_ENABLE_NEIGHBOUR_TILE_FALLBACK",
+          "value": "true",
+          "type": "BOOL"
+        }
+      ]
     },
     {
       "name": "msvc-x64-Release",

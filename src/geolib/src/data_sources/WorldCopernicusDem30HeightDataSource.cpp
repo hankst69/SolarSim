@@ -74,7 +74,8 @@ bool WorldCopernicusDem30HeightDataSource::sampleHeight(double latitudeDeg, doub
             return true;
         }
     }
-/*
+
+#ifdef GEOLIB_ENABLE_NEIGHBOUR_TILE_FALLBACK
     // Exactly on a tile border the sample also belongs to the neighbouring
     // tile; try the adjacent tiles before giving up.
     const double localLat = latitudeDeg - key.latDeg;
@@ -96,7 +97,8 @@ bool WorldCopernicusDem30HeightDataSource::sampleHeight(double latitudeDeg, doub
             }
         }
     }
-*/
+#endif
+
     return false;
 }
 

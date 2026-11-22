@@ -39,6 +39,13 @@ add_library(geolib
 
 target_include_directories(geolib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+option(GEOLIB_ENABLE_NEIGHBOUR_TILE_FALLBACK
+       "Fall back to neighbouring tiles when a height sample is missing or near a tile border"
+       ON)
+if(GEOLIB_ENABLE_NEIGHBOUR_TILE_FALLBACK)
+    target_compile_definitions(geolib PUBLIC GEOLIB_ENABLE_NEIGHBOUR_TILE_FALLBACK)
+endif()
+
 
 add_library(miniz STATIC ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/miniz/miniz.c)
 target_include_directories(geolib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/miniz)

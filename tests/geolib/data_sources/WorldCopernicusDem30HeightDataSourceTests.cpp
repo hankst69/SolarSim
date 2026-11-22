@@ -137,7 +137,9 @@ int main()
     testTilesAreCached();
     testMissingTileFails();
     testWithoutLoader();
-    testBorderFallsBackToNeighbour();
     testBoundsFor();
+#ifdef GEOLIB_ENABLE_NEIGHBOUR_TILE_FALLBACK
+    testBorderFallsBackToNeighbour();
+#endif
     return geotest::summarize("WorldCopernicusDem30HeightDataSourceTests");
 }
