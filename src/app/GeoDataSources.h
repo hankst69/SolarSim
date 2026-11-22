@@ -29,8 +29,17 @@ public:
 private:
     geo::HeightDataSourceRegistry* m_height_data_sources_registry{ nullptr };
     geo::TextureDataSourceRegistry* m_texture_data_sources_registry{ nullptr };
-    std::shared_ptr<geo::BavariaDgm1TileDownloader> m_bavariaDgm1TileDownloader{ nullptr };
-    std::shared_ptr<geo::WorldCopernicusDem30TileDownloader> m_worldDem30TileDownloader{ nullptr };
+    // The downloaders are kept alive as long as the process, because the
+    // HeightDataSourceRegistry is a singleton and registered sources keep a
+    // reference (via their TileLoader callback) to the downloader that
+    // created them. If these were regular (non-static) members, a
+    // short-lived GeoDataSources instance would register sources backed by
+    // a downloader that gets destroyed as soon as that instance goes out of
+    // scope, leaving dangling references (and an effectively empty Config)
+    // behind for any later GeoDataSources instance that finds the sources
+    // already registered and skips re-creating its own downloaders.
+    static std::shared_ptr<geo::BavariaDgm1TileDownloader> m_bavariaDgm1TileDownloader;
+    static std::shared_ptr<geo::WorldCopernicusDem30TileDownloader> m_worldDem30TileDownloader;
 
 public:
     void setProgressClass(geo::ProgressClassPtr progressClass)

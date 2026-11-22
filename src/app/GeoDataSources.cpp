@@ -26,6 +26,9 @@
 
 namespace app {
 
+std::shared_ptr<geo::BavariaDgm1TileDownloader> GeoDataSources::m_bavariaDgm1TileDownloader{ nullptr };
+std::shared_ptr<geo::WorldCopernicusDem30TileDownloader> GeoDataSources::m_worldDem30TileDownloader{ nullptr };
+
 GeoDataSources::GeoDataSources() 
 {
     //m_height_data_sources_registry = &(geo::HeightDataSourceRegistry::instance());

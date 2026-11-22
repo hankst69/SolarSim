@@ -96,13 +96,13 @@ void testBavariaDgm1SamplesHeight()
 void testCopernicusSamplesHeight()
 {
     printf("\n*** testCopernicusSamplesHeight ***\n");
-    auto sources = app::GeoDataSources();
+    auto sources = new app::GeoDataSources();
 
     // Berlin, outside Bavaria.
     const double latitude = 52.5200;
     const double longitude = 13.4050;
 
-    const auto selected = sources.heightDataSources().selectSource(latitude, longitude);
+    const auto selected = sources->heightDataSources().selectSource(latitude, longitude);
     CHECK_TRUE(selected != nullptr);
 
     double height = 0.0;
@@ -112,6 +112,8 @@ void testCopernicusSamplesHeight()
 
 void testCopernicusSamplesHeight2()
 {
+    printf("\n*** testCopernicusSamplesHeight2 ***\n");
+
     // Somewhere in the alps.
     const double latitude = 46.85185;
     const double longitude = 9.62963;
@@ -122,7 +124,7 @@ void testCopernicusSamplesHeight2()
 
     double height = 0.0;
     CHECK_TRUE(selected->sampleHeight(latitude, longitude, height));
-    CHECK_NEAR(height, 1300.5, 1e-1);
+    CHECK_NEAR(height, 1710.6, 1e-1);
 }
 
 } // namespace
@@ -134,7 +136,7 @@ int main(int argc, char* argv[])
     testSelectsCopernicusForNonBavariaLocation();
     testBavariaDgm1SamplesHeight();
     testCopernicusSamplesHeight();
-    //testCopernicusSamplesHeight2();
+    testCopernicusSamplesHeight2();
 
     return geotest::summarize("GeoDataSourcesTests");
 }
