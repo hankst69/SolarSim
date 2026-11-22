@@ -3,6 +3,8 @@
 #include <QVector>
 #include <QPointF>
 
+#include <utility>
+
 namespace app {
 
 /// Highly simplified continent outlines for the location picker map.
@@ -83,8 +85,35 @@ inline const QVector<QVector<QPointF>>& continentOutlines()
 /// outlines above would otherwise be clearly visible.
 inline const QVector<QVector<QPointF>>& continentOutlinesDetailed()
 {
-#include "ContinentOutlinesDetailed.inc"
-    return kDetailedOutlines;
+    // The raw coordinate data is kept as flat C arrays (see
+    // ContinentOutlinesDetailedData.inc) rather than a nested
+    // QVector<QVector<QPointF>> initializer list, because compiling a
+    // literal initializer list with thousands of QPointF/QVector
+    // constructor calls made this translation unit extremely slow to
+    // build. The flat arrays are cheap to compile and are converted into
+    // the richer QVector<QVector<QPointF>> structure once, lazily, at
+    // runtime.
+#include "ContinentOutlinesDetailedData.inc"
+
+    static const QVector<QVector<QPointF>> outlines = [] {
+        QVector<QVector<QPointF>> result;
+        const int numPolygons = int(sizeof(kDetailedOutlinesCounts) / sizeof(kDetailedOutlinesCounts[0]));
+        result.reserve(numPolygons);
+        int coordIndex = 0;
+        for (int p = 0; p < numPolygons; ++p) {
+            const int count = kDetailedOutlinesCounts[p];
+            QVector<QPointF> polygon;
+            polygon.reserve(count);
+            for (int i = 0; i < count; ++i) {
+                const double lon = kDetailedOutlinesCoords[coordIndex++];
+                const double lat = kDetailedOutlinesCoords[coordIndex++];
+                polygon.append(QPointF(lon, lat));
+            }
+            result.append(std::move(polygon));
+        }
+        return result;
+    }();
+    return outlines;
 }
 
 } // namespace app
