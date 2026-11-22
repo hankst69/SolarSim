@@ -85,14 +85,17 @@ bool GeoDataSources::fetchUrl(const std::string& url, const std::string& targetP
 
 std::string GeoDataSources::cacheDirectoryFor(const std::string& subDirectory)
 {
-    //const QString base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    //return QDir(base).filePath(QString::fromStdString(subDirectory)).toStdString();
+    // QStandardPaths::AppLocalDataLocation appends the application's
+    // organizationName/applicationName (e.g. "SolarSim/SolarSim") to the base
+    // path, which differs between the unit tests and the final application
+    // and results in an unwanted nested "SolarSim\SolarSim" folder.
+    // GenericDataLocation gives the plain "...\AppData\Local" base path,
+    // independent of the current QCoreApplication name settings, so we use
+    // that and append a fixed "GeoLib" folder ourselves.
+    const QString base = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+    const auto baseDir = QDir(base).filePath("GeoLib");
 
-    const QString base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    auto baseDir = QDir(base);  
-    //baseDir.cdUp();
-
-    const QByteArray targetDir_utf8 = baseDir
+    const QByteArray targetDir_utf8 = QDir(baseDir)
         .filePath(QString::fromUtf8(subDirectory.c_str()))
         .toUtf8();
     return std::string(targetDir_utf8.constData(), static_cast<std::size_t>(targetDir_utf8.size()));
