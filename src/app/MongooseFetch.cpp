@@ -37,6 +37,12 @@ struct MgFetchState {
     // -1 means no Content-Length header was present (e.g. chunked transfer).
     long long contentLength{-1};
     bool truncated{false};
+    // When > 0, the request will ask the server for a byte-range starting at
+    // this offset, so a previously truncated download can be resumed.
+    long long rangeStart{0};
+    // Total resource size as reported by a 206 Partial Content response's
+    // Content-Range header. -1 means unknown.
+    long long contentRangeTotal{-1};
 };
 
 std::string resolveRedirect(const std::string& baseUrl, const std::string& location)
@@ -109,14 +115,19 @@ void mgFetchHandler(mg_connection* c, int ev, void* evData)
             opts.name = host;
             mg_tls_init(c, &opts);
         }
+        std::string rangeHeader;
+        if (s->rangeStart > 0) {
+            rangeHeader = "Range: bytes=" + std::to_string(s->rangeStart) + "-\r\n";
+        }
         mg_printf(c,
                   "GET %s HTTP/1.1\r\n"
                   "Host: %s\r\n"
                   "User-Agent: SolarSim\r\n"
                   "%s"
+                  "%s"
                   "Connection: close\r\n\r\n",
                   mg_url_uri(s->url.c_str()), hostHeader.c_str(),
-                  s->authHeader.c_str());
+                  s->authHeader.c_str(), rangeHeader.c_str());
     } else if (ev == MG_EV_HTTP_MSG) {
         auto* hm = static_cast<mg_http_message*>(evData);
         s->gotResponse = true;
@@ -141,6 +152,19 @@ void mgFetchHandler(mg_connection* c, int ev, void* evData)
                 }
             }
         }
+        if (mg_str* cr = mg_http_get_header(hm, "Content-Range")) {
+            // Expected format: "bytes start-end/total"
+            const std::string crStr(cr->buf, cr->len);
+            const std::size_t slashPos = crStr.find('/');
+            if (slashPos != std::string::npos) {
+                const std::string totalStr = crStr.substr(slashPos + 1);
+                char* end = nullptr;
+                const long long total = std::strtoll(totalStr.c_str(), &end, 10);
+                if (end != totalStr.c_str() && total >= 0) {
+                    s->contentRangeTotal = total;
+                }
+            }
+        }
         c->is_closing = 1;
         s->done = true;
     } else if (ev == MG_EV_ERROR) {
@@ -156,24 +180,23 @@ void mgFetchHandler(mg_connection* c, int ev, void* evData)
 } // namespace
 
 
-bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
-                      const std::string& userName, const std::string& password,
-                      const int timeOutSeconds)
-{
-#if DEBUG
-    printf("fetchUrlMongoose()... url='%s' targetPath='%s' userName='%s'\n", url.c_str(), targetPath.c_str(), userName.c_str());
-#endif
-    mg_log_set_fn(console_print_char, nullptr);
+namespace {
 
+// Performs a single HTTP request (following redirects) starting at the given
+// byte offset. Returns true if a (possibly partial) response body was
+// received and appended to `accumulatedBody`.
+bool fetchOnce(std::string url, const std::string& userNamePassAuthHeader,
+               long long rangeStart, const int timeOutSeconds,
+               std::string& accumulatedBody, long long& totalSize, bool& truncated,
+               int& finalStatus)
+{
     constexpr int kMaxRedirects = 5;
     const auto kTimeout = timeOutSeconds > 0 ? std::chrono::seconds(timeOutSeconds) : std::chrono::seconds(120);
 
     MgFetchState state;
-    state.url = url;
-    if (!userName.empty() && !password.empty()) {
-        const QByteArray cred = QByteArray::fromStdString(userName + ':' + password).toBase64();
-        state.authHeader = "Authorization: Basic " + cred.toStdString() + "\r\n";
-    }
+    state.url = std::move(url);
+    state.authHeader = userNamePassAuthHeader;
+    state.rangeStart = rangeStart;
 
     for (int redirects = 0; redirects <= kMaxRedirects; ++redirects) {
         state.done = false;
@@ -183,6 +206,7 @@ bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
         state.body.clear();
         state.error.clear();
         state.contentLength = -1;
+        state.contentRangeTotal = -1;
         state.truncated = false;
 
         mg_mgr mgr;
@@ -223,7 +247,76 @@ bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
         break;
     }
 
-    if (!state.gotResponse || state.status != 200 /*|| state.truncated*/) {
+    if (!state.gotResponse) {
+        return false;
+    }
+
+    finalStatus = state.status;
+    // Accept both a full response (200) and a resumed partial response (206).
+    if (state.status != 200 && state.status != 206) {
+        return false;
+    }
+
+    accumulatedBody.append(state.body);
+    truncated = state.truncated;
+    if (state.status == 206 && state.contentRangeTotal >= 0) {
+        totalSize = state.contentRangeTotal;
+    } else if (state.contentLength >= 0) {
+        totalSize = rangeStart + state.contentLength;
+    }
+    return true;
+}
+
+} // namespace
+
+bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
+                      const std::string& userName, const std::string& password,
+                      const int timeOutSeconds)
+{
+#if DEBUG
+    printf("fetchUrlMongoose()... url='%s' targetPath='%s' userName='%s'\n", url.c_str(), targetPath.c_str(), userName.c_str());
+#endif
+    mg_log_set_fn(console_print_char, nullptr);
+
+    std::string authHeader;
+    if (!userName.empty() && !password.empty()) {
+        const QByteArray cred = QByteArray::fromStdString(userName + ':' + password).toBase64();
+        authHeader = "Authorization: Basic " + cred.toStdString() + "\r\n";
+    }
+
+    // Retry the download a number of times, resuming from the last received
+    // byte offset via an HTTP Range request whenever the connection is
+    // closed before the full body has been received. This makes the download
+    // resilient against the connection being dropped near the end of large
+    // transfers.
+    constexpr int kMaxAttempts = 5;
+    std::string body;
+    long long totalSize = -1;
+    bool truncated = false;
+    int finalStatus = 0;
+    bool ok = false;
+
+    for (int attempt = 0; attempt < kMaxAttempts; ++attempt) {
+        const long long rangeStart = static_cast<long long>(body.size());
+        truncated = false;
+        ok = fetchOnce(url, authHeader, rangeStart, timeOutSeconds, body, totalSize, truncated, finalStatus);
+        if (!ok) {
+            break;
+        }
+        if (!truncated) {
+            break; // got a complete response
+        }
+        // Partial response received; loop again to resume from where we left off.
+    }
+
+    if (!ok || (finalStatus != 200 && finalStatus != 206)) {
+        return false;
+    }
+    if (truncated) {
+        // Ran out of retry attempts while still truncated.
+        return false;
+    }
+    if (totalSize >= 0 && static_cast<long long>(body.size()) < totalSize) {
         return false;
     }
 
@@ -240,7 +333,7 @@ bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
     const fs::path tmp = fs::path(targetPath + ".part");
     {
         std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
-        out.write(state.body.data(), static_cast<std::streamsize>(state.body.size()));
+        out.write(body.data(), static_cast<std::streamsize>(body.size()));
         if (!out.good()) {
             out.close();
             fs::remove(tmp, ec);
@@ -257,9 +350,8 @@ bool fetchUrlMongoose(const std::string& url, const std::string& targetPath,
         fs::remove(tmp, ec);
         return false;
     }
-    
-    //return true;
-    return !state.truncated;
+
+    return true;
 }
 
 } // namespace app
