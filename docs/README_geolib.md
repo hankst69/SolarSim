@@ -168,7 +168,7 @@ cmake -S . -B build
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
-Set `-DBUILD_GEOLIB_TESTS=OFF` to skip the tests.
+Set `-DGEOLIB_BUILD_TESTS=OFF` to skip the tests.
 
 The test tree mirrors the library layout, so a test sits in the same relative place 
 as the code it covers:

@@ -21,7 +21,7 @@
     Build tree location. Defaults to <repo>/build/<Configuration>.
 
 .PARAMETER NoTests
-    Configure with BUILD_GEOLIB_TESTS=OFF, i.e. build the library only.
+    Configure with GEOLIB_BUILD_TESTS=OFF, i.e. build the library only.
 
 .PARAMETER Clean
     Delete the build tree before configuring.
@@ -70,7 +70,7 @@ if ($Generator) {
     $configureArgs += @('-G', $Generator)
 }
 if ($NoTests) {
-    $configureArgs += '-DBUILD_GEOLIB_TESTS=OFF'
+    $configureArgs += '-DGEOLIB_BUILD_TESTS=OFF'
 }
 
 Write-Host "Configuring ($Configuration) in $BuildDir" -ForegroundColor Cyan

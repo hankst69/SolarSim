@@ -18,11 +18,11 @@ set(CMAKE_AUTOMOC ON)
 # derive from SceneViewBase); MainWindow is the single place that selects
 # between them based on these compile definitions (see SceneViewWidget in
 # MainWindow.h).
-option(SOLARSIM_USE_WEBGPU "Render the scene with hardware accelerated WebGPU instead of the software rasterizer" OFF)
-option(SOLARSIM_USE_OPENGL "Render the scene with hardware accelerated OpenGL (Qt's QOpenGLWidget) instead of the software rasterizer" OFF)
+option(GEOLIB_SOLARSIM_USE_WEBGPU "Render the scene with hardware accelerated WebGPU instead of the software rasterizer" OFF)
+option(GEOLIB_SOLARSIM_USE_OPENGL "Render the scene with hardware accelerated OpenGL (Qt's QOpenGLWidget) instead of the software rasterizer" OFF)
 
-if(SOLARSIM_USE_WEBGPU AND SOLARSIM_USE_OPENGL)
-    message(FATAL_ERROR "SOLARSIM_USE_WEBGPU and SOLARSIM_USE_OPENGL are mutually exclusive")
+if(GEOLIB_SOLARSIM_USE_WEBGPU AND GEOLIB_SOLARSIM_USE_OPENGL)
+    message(FATAL_ERROR "GEOLIB_SOLARSIM_USE_WEBGPU and GEOLIB_SOLARSIM_USE_OPENGL are mutually exclusive")
 endif()
 
 # The application logic (everything except main.cpp) lives in a static
@@ -45,9 +45,9 @@ add_library(SolarSimAppLib STATIC
     ContinentOutlines.h
 )
 
-if(SOLARSIM_USE_OPENGL)
+if(GEOLIB_SOLARSIM_USE_OPENGL)
     target_sources(SolarSimAppLib PRIVATE SceneViewGL.cpp SceneViewGL.h)
-    target_compile_definitions(SolarSimAppLib PUBLIC SOLARSIM_USE_OPENGL)
+    target_compile_definitions(SolarSimAppLib PUBLIC GEOLIB_SOLARSIM_USE_OPENGL)
 
     if(Qt6_FOUND)
         find_package(Qt6 COMPONENTS OpenGLWidgets REQUIRED)
@@ -58,9 +58,9 @@ if(SOLARSIM_USE_OPENGL)
     endif()
 endif()
 
-if(SOLARSIM_USE_WEBGPU)
+if(GEOLIB_SOLARSIM_USE_WEBGPU)
     target_sources(SolarSimAppLib PRIVATE SceneViewWEBGPU.cpp SceneViewWEBGPU.h)
-    target_compile_definitions(SolarSimAppLib PUBLIC SOLARSIM_USE_WEBGPU)
+    target_compile_definitions(SolarSimAppLib PUBLIC GEOLIB_SOLARSIM_USE_WEBGPU)
 
     if(EMSCRIPTEN)
         # Emscripten ships its own webgpu.h and JS glue; just enable the
@@ -77,7 +77,7 @@ if(SOLARSIM_USE_WEBGPU)
             target_link_libraries(SolarSimAppLib PUBLIC webgpu::webgpu)
         else()
             message(WARNING
-                "SOLARSIM_USE_WEBGPU is ON but no native WebGPU package "
+                "GEOLIB_SOLARSIM_USE_WEBGPU is ON but no native WebGPU package "
                 "(wgpu-native / Dawn) was found via find_package(webgpu). "
                 "Fetch/install one and point CMAKE_PREFIX_PATH at it, or "
                 "build for Emscripten instead.")

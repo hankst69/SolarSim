@@ -16,7 +16,7 @@
 #                              platform default generator if Ninja is missing.
 #   -b, --build-dir <dir>      Build tree location. Default: <repo>/build/<cfg>.
 #   -j, --jobs <n>             Parallel build jobs. Default: number of CPUs.
-#       --no-tests             Configure with BUILD_GEOLIB_TESTS=OFF.
+#       --no-tests             Configure with GEOLIB_BUILD_TESTS=OFF.
 #       --clean                Delete the build tree before configuring.
 #   -h, --help                 Show this help.
 #
@@ -88,7 +88,7 @@ if [[ -n "$generator" ]]; then
     configure_args+=(-G "$generator")
 fi
 if [[ $no_tests -eq 1 ]]; then
-    configure_args+=(-DBUILD_GEOLIB_TESTS=OFF)
+    configure_args+=(-DGEOLIB_BUILD_TESTS=OFF)
 fi
 
 echo "Configuring ($configuration) in $build_dir"

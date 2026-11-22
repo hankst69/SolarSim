@@ -5,9 +5,9 @@ project(GeoSolar LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(BUILD_GEOLIB_TESTS    "Build the geolib unit tests" ON)
-option(BUILD_GEOLIB_EXAMPLES "Build the geolib examples" ON)
-option(BUILD_SOLARSIM_APP    "Build the SolarSim Qt GUI application" ON)
+option(GEOLIB_BUILD_TESTS          "Build the geolib unit tests" ON)
+option(GEOLIB_BUILD_EXAMPLES       "Build the geolib examples" ON)
+option(GEOLIB_SOLARSIM_BUILD_APP   "Build the SolarSim Qt GUI application" ON)
 
 add_subdirectory(src/geolib)
 
@@ -35,16 +35,16 @@ endif()
 # then link it to the app target:
 # target_link_libraries(<your_app_target> PRIVATE mongoose)
 
-if(BUILD_SOLARSIM_APP)
+if(GEOLIB_SOLARSIM_BUILD_APP)
     add_subdirectory(src/app)
 endif()
 
-if(BUILD_GEOLIB_TESTS)
+if(GEOLIB_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
 
-if(BUILD_GEOLIB_EXAMPLES)
+if(GEOLIB_BUILD_EXAMPLES)
     add_subdirectory(src/examples)
 endif()
 

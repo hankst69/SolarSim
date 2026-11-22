@@ -11,10 +11,10 @@
 
 #include <memory>
 
-#if defined(SOLARSIM_USE_OPENGL)
+#if defined(GEOLIB_SOLARSIM_USE_OPENGL)
 #include "SceneViewGL.h"
 using SceneViewWidget = SceneViewGL;
-#elif defined(SOLARSIM_USE_WEBGPU)
+#elif defined(GEOLIB_SOLARSIM_USE_WEBGPU)
 #include "SceneViewWEBGPU.h"
 using SceneViewWidget = SceneViewWEBGPU;
 #else

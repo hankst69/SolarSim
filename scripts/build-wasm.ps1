@@ -17,10 +17,10 @@
     Build tree location. Defaults to <repo>/build/wasm-<Configuration>.
 
 .PARAMETER NoTests
-    Configure with BUILD_GEOLIB_TESTS=OFF, i.e. build the library only.
+    Configure with GEOLIB_BUILD_TESTS=OFF, i.e. build the library only.
 
 .PARAMETER WebGpu
-    Configure with SOLARSIM_USE_WEBGPU=ON (else the software rasterizer is
+    Configure with GEOLIB_SOLARSIM_USE_WEBGPU=ON (else the software rasterizer is
     used).
 
 .PARAMETER Clean
@@ -63,10 +63,10 @@ if ($Clean -and (Test-Path $BuildDir)) {
 
 $configureArgs = @('-S', $repoRoot, '-B', $BuildDir, "-DCMAKE_BUILD_TYPE=$Configuration")
 if ($NoTests) {
-    $configureArgs += '-DBUILD_GEOLIB_TESTS=OFF'
+    $configureArgs += '-DGEOLIB_BUILD_TESTS=OFF'
 }
 if ($WebGpu) {
-    $configureArgs += '-DSOLARSIM_USE_WEBGPU=ON'
+    $configureArgs += '-DGEOLIB_SOLARSIM_USE_WEBGPU=ON'
 }
 # Let CTest run the resulting .js tests directly through Node.
 $node = Get-Command node -ErrorAction SilentlyContinue

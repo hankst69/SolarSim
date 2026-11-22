@@ -63,7 +63,7 @@ run the suites in one step:
 Both exit with a non zero code if any suite fails, so they can be used in CI.
 Pass `-h` / `--help` to either script for the full option list.
 
-Set `-DBUILD_GEOLIB_TESTS=OFF` to skip them.
+Set `-DGEOLIB_BUILD_TESTS=OFF` to skip them.
 
 ## WebAssembly build
 
@@ -130,7 +130,7 @@ around a location and lights it with the simulated sun.
 
 The application is built when Qt (Widgets, Qt6 preferred, Qt5 as fallback) is
 found by CMake; otherwise it is skipped with a status message and only the
-library and the tests are built. Set `-DBUILD_SOLARSIM_APP=OFF` to skip it
+library and the tests are built. Set `-DGEOLIB_SOLARSIM_BUILD_APP=OFF` to skip it
 explicitly.
 
 On start it shows the location of the example above (49.56255, 11.14493) for
@@ -164,7 +164,7 @@ Emscripten), without depending on OS specific graphics APIs.
 Enable it with:
 
 ```
-cmake -S . -B build -DSOLARSIM_USE_WEBGPU=ON
+cmake -S . -B build -DGEOLIB_SOLARSIM_USE_WEBGPU=ON
 ```
 
 - **Native desktop**: requires a native WebGPU implementation such as
@@ -174,11 +174,11 @@ cmake -S . -B build -DSOLARSIM_USE_WEBGPU=ON
   `CMAKE_PREFIX_PATH` at its install directory). Windows (HWND) surface
   creation is implemented; Linux/macOS surface creation is a follow-up.
 - **WebAssembly**: configure with the Emscripten toolchain
-  (`emcmake cmake -S . -B build-wasm -DSOLARSIM_USE_WEBGPU=ON`) and build with
+  (`emcmake cmake -S . -B build-wasm -DGEOLIB_SOLARSIM_USE_WEBGPU=ON`) and build with
   `emmake cmake --build build-wasm`; Emscripten's built-in WebGPU support is
   used automatically, rendering into the page's `#canvas` element.
 
-When `SOLARSIM_USE_WEBGPU` is `OFF` (the default), none of this code is
+When `GEOLIB_SOLARSIM_USE_WEBGPU` is `OFF` (the default), none of this code is
 compiled and the application behaves exactly as before.
 
 Planned additions:

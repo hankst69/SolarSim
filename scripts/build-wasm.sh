@@ -17,8 +17,8 @@
 #                              MinSizeRel). Default: Release.
 #   -b, --build-dir <dir>      Build tree location. Default: <repo>/build/wasm-<cfg>.
 #   -j, --jobs <n>             Parallel build jobs. Default: number of CPUs.
-#       --no-tests             Configure with BUILD_GEOLIB_TESTS=OFF.
-#       --webgpu                Configure with SOLARSIM_USE_WEBGPU=ON (else the
+#       --no-tests             Configure with GEOLIB_BUILD_TESTS=OFF.
+#       --webgpu                Configure with GEOLIB_SOLARSIM_USE_WEBGPU=ON (else the
 #                              software rasterizer is used).
 #       --clean                Delete the build tree before configuring.
 #   -h, --help                 Show this help.
@@ -83,10 +83,10 @@ fi
 
 configure_args=(-S "$repo_root" -B "$build_dir" "-DCMAKE_BUILD_TYPE=$configuration")
 if [[ $no_tests -eq 1 ]]; then
-    configure_args+=(-DBUILD_GEOLIB_TESTS=OFF)
+    configure_args+=(-DGEOLIB_BUILD_TESTS=OFF)
 fi
 if [[ $webgpu -eq 1 ]]; then
-    configure_args+=(-DSOLARSIM_USE_WEBGPU=ON)
+    configure_args+=(-DGEOLIB_SOLARSIM_USE_WEBGPU=ON)
 fi
 # Let CTest run the resulting .js tests directly through Node.
 if command -v node >/dev/null 2>&1; then
