@@ -364,6 +364,21 @@ void SceneViewGL::uploadSunOverlayIfNeeded()
         }
     }
 
+    m_compassVertexOffset = static_cast<int>(overlayVertices.size());
+    for (const CompassLabel& label : m_compassLabels) {
+        const std::array<float, 3> rgb = compassLabelColor(label.letter);
+        for (const geo::Vector3& point : label.lineList) {
+            Vertex vertex{};
+            vertex.position[0] = static_cast<float>(point.x);
+            vertex.position[1] = static_cast<float>(point.y);
+            vertex.position[2] = static_cast<float>(point.z);
+            vertex.color[0] = rgb[0];
+            vertex.color[1] = rgb[1];
+            vertex.color[2] = rgb[2];
+            overlayVertices.push_back(vertex);
+        }
+    }
+
     m_overlayVertexCount = static_cast<int>(overlayVertices.size());
 
     m_overlayVao.bind();
@@ -439,10 +454,17 @@ void SceneViewGL::paintGL()
             glDrawArrays(GL_LINES, markerOffset, markerCount);
         }
 
-        const int crossCount = m_overlayVertexCount - m_centerCrossVertexOffset;
+        const int crossCount = m_compassVertexOffset - m_centerCrossVertexOffset;
         if (crossCount >= 4) {
             glDrawArrays(GL_LINES, m_centerCrossVertexOffset, crossCount);
         }
+        m_overlayVao.release();
+    }
+
+    const int compassCount = m_overlayVertexCount - m_compassVertexOffset;
+    if (compassCount >= 2) {
+        m_overlayVao.bind();
+        glDrawArrays(GL_LINES, m_compassVertexOffset, compassCount);
         m_overlayVao.release();
     }
 

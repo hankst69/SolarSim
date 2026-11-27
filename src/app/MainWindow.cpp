@@ -158,7 +158,7 @@ void MainWindow::buildUi()
 
     m_showCenterCubeCheckBox = new QCheckBox(tr("Show center cube"), timeBox);
     m_showCenterCubeCheckBox->setObjectName(QStringLiteral("showCenterCubeCheckBox"));
-    m_showCenterCubeCheckBox->setChecked(false);
+    m_showCenterCubeCheckBox->setChecked(true);
     dateLayout->addWidget(m_showCenterCubeCheckBox);
 
     m_heightExaggerationSpin = new QDoubleSpinBox(timeBox);

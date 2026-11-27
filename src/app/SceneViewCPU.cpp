@@ -157,6 +157,20 @@ void SceneViewCPU::drawSunOverlay(QPainter& painter)
             painter.drawLine(c, d);
         }
     }
+
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    for (const CompassLabel& label : m_compassLabels) {
+        const std::array<float, 3> rgb = compassLabelColor(label.letter);
+        painter.setPen(QPen(QColor::fromRgbF(rgb[0], rgb[1], rgb[2]), 2));
+        for (std::size_t i = 0; i + 1 < label.lineList.size(); i += 2) {
+            QPointF a, b;
+            double depth = 0.0;
+            if (projectPoint(label.lineList[i], a, depth) &&
+                projectPoint(label.lineList[i + 1], b, depth)) {
+                painter.drawLine(a, b);
+            }
+        }
+    }
 }
 
 bool SceneViewCPU::projectPoint(const geo::Vector3& local, QPointF& screen, double& depth) const

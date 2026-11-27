@@ -74,6 +74,7 @@ private:
     int m_vertexCount{0};
     int m_overlayVertexCount{0};
     int m_centerCrossVertexOffset{0};
+    int m_compassVertexOffset{0};
     bool m_geometryDirty{true};
     bool m_overlayDirty{true};
     bool m_glInitialized{false};

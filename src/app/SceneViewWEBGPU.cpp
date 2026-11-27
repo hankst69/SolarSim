@@ -682,6 +682,20 @@ void SceneViewWEBGPU::uploadSunOverlayIfDirty()
         }
     }
 
+    for (const CompassLabel& label : m_compassLabels) {
+        const std::array<float, 3> rgb = compassLabelColor(label.letter);
+        for (const geo::Vector3& p : label.lineList) {
+            Vertex v{};
+            v.position[0] = static_cast<float>(p.x);
+            v.position[1] = static_cast<float>(p.y);
+            v.position[2] = static_cast<float>(p.z);
+            v.color[0] = rgb[0];
+            v.color[1] = rgb[1];
+            v.color[2] = rgb[2];
+            overlayVertices.push_back(v);
+        }
+    }
+
     m_overlayVertexCount = static_cast<std::uint32_t>(overlayVertices.size());
 
     if (m_overlayVertexBuffer) {

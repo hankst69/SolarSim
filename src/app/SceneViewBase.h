@@ -9,6 +9,7 @@
 
 #include <QPoint>
 
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -66,6 +67,7 @@ protected:
     void rebuildSunPathOverlay();
     void rebuildCenterCrossOverlay();
     void rebuildCenterCubeGeometry();
+    void rebuildCompassLabels();
 
     /// Shared mouse-driven camera orbit/zoom handling. Concrete classes call
     /// these from their mousePressEvent()/mouseMoveEvent()/wheelEvent()
@@ -108,6 +110,19 @@ protected:
     /// (counter-clockwise seen from above), 4-7 the top face in the same
     /// order.
     std::vector<geo::Vector3> m_centerCubeCorners;
+
+    /// Large stroke letters N, E, S, W hovering above the horizon in the
+    /// respective compass direction, standing upright on the dome and facing
+    /// the centre (readable from inside the dome). Stored as a line list
+    /// (pairs of points) in local coordinates, not height-exaggerated.
+    struct CompassLabel {
+        char letter{'N'};
+        std::vector<geo::Vector3> lineList;
+    };
+    std::vector<CompassLabel> m_compassLabels;
+
+    /// RGB colour (0..1) used for the given compass letter.
+    static std::array<float, 3> compassLabelColor(char letter);
 
     bool m_shadowsEnabled{false};
     double m_terrainHeightExaggeration{1.0};
