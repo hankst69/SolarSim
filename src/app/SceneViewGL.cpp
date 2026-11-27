@@ -214,6 +214,11 @@ void SceneViewGL::onCenterCubeVisibleChanged()
     rebuildGeometry();
 }
 
+void SceneViewGL::onCompassVisibleChanged()
+{
+  rebuildGeometry();
+}
+
 void SceneViewGL::uploadGeometryIfNeeded()
 {
     if (!m_geometryDirty || !m_glInitialized || !m_terrain) {

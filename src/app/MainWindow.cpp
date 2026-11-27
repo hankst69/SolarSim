@@ -6,7 +6,6 @@
 
 
 #include "geolib/CameraPosition.h"
-#include "geolib/GridHeightDataSource.h"
 #include "geolib/HeightDataSourceRegistry.h"
 #include "geolib/HorizonDome.h"
 #include "geolib/TimeZone.h"
@@ -16,15 +15,12 @@
 #include <QDateEdit>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
-#include <QGridLayout>
 #include <QGroupBox>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QSlider>
 #include <QStatusBar>
 #include <QTimer>
-#include <QVBoxLayout>
 
 #include <cmath>
 
@@ -161,6 +157,11 @@ void MainWindow::buildUi()
     m_showCenterCubeCheckBox->setChecked(true);
     dateLayout->addWidget(m_showCenterCubeCheckBox);
 
+    m_showCompassCheckBox = new QCheckBox(tr("Show compass"), timeBox);
+    m_showCompassCheckBox->setObjectName(QStringLiteral("showCompassCheckBox"));
+    m_showCompassCheckBox->setChecked(true);
+    dateLayout->addWidget(m_showCompassCheckBox);
+
     m_heightExaggerationSpin = new QDoubleSpinBox(timeBox);
     m_heightExaggerationSpin->setObjectName(QStringLiteral("heightExaggerationSpin"));
     m_heightExaggerationSpin->setRange(1.0, 20.0);
@@ -172,6 +173,9 @@ void MainWindow::buildUi()
 
     dateLayout->addStretch(1);
     timeLayout->addLayout(dateLayout);
+
+    m_sceneView->setCenterCubeVisible(m_showCenterCubeCheckBox->isChecked());
+    m_sceneView->setCompassVisible(m_showCompassCheckBox->isChecked());
 
     auto* sliderGrid = new QGridLayout();
 
@@ -379,6 +383,7 @@ void MainWindow::buildUi()
     connect(m_localTimeCheckBox, &QCheckBox::toggled, this, &MainWindow::onLocalTimeToggled);
     connect(m_shadowsCheckBox, &QCheckBox::toggled, this, &MainWindow::onShadowsToggled);
     connect(m_showCenterCubeCheckBox, &QCheckBox::toggled, this, &MainWindow::onCenterCubeToggled);
+    connect(m_showCompassCheckBox, &QCheckBox::toggled, this, &MainWindow::onCompassToggled);
     connect(m_heightExaggerationSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this, &MainWindow::onTerrainHeightExaggerationChanged);
     connect(m_latitudeSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
@@ -453,6 +458,13 @@ void MainWindow::onCenterCubeToggled(bool checked)
 {
     if (m_sceneView) {
         m_sceneView->setCenterCubeVisible(checked);
+    }
+}
+
+void MainWindow::onCompassToggled(bool checked)
+{
+    if (m_sceneView) {
+        m_sceneView->setCompassVisible(checked);
     }
 }
 

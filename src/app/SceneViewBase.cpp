@@ -118,6 +118,15 @@ void SceneViewBase::setCenterCubeVisible(bool visible)
     onCenterCubeVisibleChanged();
 }
 
+void SceneViewBase::setCompassVisible(bool visible)
+{
+  if (m_compassVisible == visible) {
+    return;
+  }
+  m_compassVisible = visible;
+  onCompassVisibleChanged();
+}
+
 void SceneViewBase::rebuildLight()
 {
     if (!m_terrain) {

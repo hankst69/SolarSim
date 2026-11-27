@@ -55,6 +55,7 @@ private slots:
     void onLocalTimeToggled(bool checked);
     void onShadowsToggled(bool checked);
     void onCenterCubeToggled(bool checked);
+    void onCompassToggled(bool checked);
     void onTerrainHeightExaggerationChanged(double factor);
     void onLocationSpinChanged();
     void onLocationPickedOnMap(double latitudeDeg, double longitudeDeg);
@@ -98,6 +99,7 @@ private:
     QCheckBox* m_localTimeCheckBox{nullptr};
     QCheckBox* m_shadowsCheckBox{nullptr};
     QCheckBox* m_showCenterCubeCheckBox{nullptr};
+    QCheckBox* m_showCompassCheckBox{nullptr};
     QDoubleSpinBox* m_heightExaggerationSpin{nullptr};
     QSlider* m_timeSlider{nullptr};
     QLabel* m_timeLabel{nullptr};

@@ -38,11 +38,13 @@ public:
     void setShadowsEnabled(bool enabled);
     void setTerrainHeightExaggeration(double factor);
     void setCenterCubeVisible(bool visible);
+    void setCompassVisible(bool visible);
 
     const geo::CameraPosition* camera() const { return m_camera.get(); }
     bool shadowsEnabled() const { return m_shadowsEnabled; }
     double terrainHeightExaggeration() const { return m_terrainHeightExaggeration; }
     bool centerCubeVisible() const { return m_centerCubeVisible; }
+    bool compassVisible() const { return m_compassVisible; }
 
     void setProgressClass(geo::ProgressClassPtr progressClass)
     {
@@ -58,6 +60,7 @@ protected:
     virtual void onCameraChanged() {}
     virtual void onShadowsEnabledChanged() {}
     virtual void onCenterCubeVisibleChanged() {}
+    virtual void onCompassVisibleChanged() {}
 
     /// Invoked by the shared mouse orbit/zoom handling below so the concrete
     /// widget can emit its own Qt cameraChanged() signal.
@@ -127,6 +130,7 @@ protected:
     bool m_shadowsEnabled{false};
     double m_terrainHeightExaggeration{1.0};
     bool m_centerCubeVisible{false};
+    bool m_compassVisible{true};
 
     QPoint m_lastMousePos;
 

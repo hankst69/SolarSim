@@ -46,6 +46,7 @@ protected:
     void onCameraChanged() override;
     void onShadowsEnabledChanged() override;
     void onCenterCubeVisibleChanged() override { update(); }
+    void onCompassVisibleChanged() override { update(); }
     void emitCameraChanged() override { emit cameraChanged(); }
 
 private:
